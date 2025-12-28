@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% set title="GeoQuest" %}
+{% block content %}
+  <div class="page hero-page">
+    <div class="hero">
+      <div class="hero-left">
+        <h1 class="hero-title">
+          <span class="hero-title-strong">Learn Geography</span><br>
+          <span class="hero-title-accent">by Playing</span>
+        </h1>
+        <p class="hero-sub">
+          Master world flags, locate countries on the map, and<br>
+          discover languages spoken around the globe <br>
+        </p>
+
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/flags">
+            <span class="icon">
+              <!-- flag -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 22V4"></path>
+                <path d="M4 4h12l-2 5 2 5H4"></path>
+              </svg>
+            </span>
+            Start with Flags
+            <span class="chev">›</span>
+          </a>
+          <a class="btn btn-outline" href="/map">
+            <span class="icon">
+              <!-- pin -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path>
+                <circle cx="12" cy="11" r="2"></circle>
+              </svg>
+            </span>
+            Map Challenge
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="globe">
+          <div class="globe-inner">
+            <div class="globe-grid"></div>
+            <div class="globe-stars"></div>
+          </div>
+        </div>
+        <div class="globe-ring ring-1"></div>
+        <div class="globe-ring ring-2"></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon i-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4"></path><path d="M4 4h12l-2 5 2 5H4"></path></svg>
+        </div>
+        <div class="stat-meta">
+          <div class="stat-label">Flags Mastered</div>
+          <div class="stat-value" id="stat-flags">0</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon i-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
+        </div>
+        <div class="stat-meta">
+          <div class="stat-label">Countries Located</div>
+          <div class="stat-value" id="stat-located">0</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon i-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3 4 3 4 7a4 4 0 0 1-8 0c0-4 3-4 4-7Z"></path><path d="M6 14a6 6 0 1 0 12 0"></path></svg>
+        </div>
+        <div class="stat-meta">
+          <div class="stat-label">Day Streak</div>
+          <div class="stat-value" id="stat-streak">0</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon i-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3"></path><path d="M12 19v3"></path><path d="M2 12h3"></path><path d="M19 12h3"></path></svg>
+        </div>
+        <div class="stat-meta">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value" id="stat-acc">100%</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2 class="section-title">Choose Your Challenge</h2>
+
+      <div class="challenge-grid">
+        <a class="challenge-card" href="/flags">
+          <div class="cc-left">
+            <div class="cc-icon i-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4"></path><path d="M4 4h12l-2 5 2 5H4"></path></svg>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="cc-title">Flag Challenge</div>
+            <div class="cc-sub">Identify countries by their flags with multiple-choice questions.</div>
+          </div>
+          <div class="cc-arrow">›</div>
+        </a>
+
+        <a class="challenge-card" href="/map">
+          <div class="cc-left">
+            <div class="cc-icon i-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="cc-title">Map Challenge</div>
+            <div class="cc-sub">Click the correct country on an interactive world map.</div>
+          </div>
+          <div class="cc-arrow">›</div>
+        </a>
+
+        <a class="challenge-card" href="/languages">
+          <div class="cc-left">
+            <div class="cc-icon i-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h7"></path><path d="M7 5v14"></path><path d="M15 5h5"></path><path d="M17 5c0 6-2 10-6 14"></path><path d="M16 12c1.5 2 3 3 4 3"></path></svg>
+            </div>
+          </div>
+          <div class="cc-body">
+            <div class="cc-title">Language Explorer</div>
+            <div class="cc-sub">See what languages are spoken in each country (and quiz yourself).</div>
+          </div>
+          <div class="cc-arrow">›</div>
+        </a>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}
