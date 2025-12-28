@@ -512,6 +512,22 @@ label{ display:block; font-weight: 800; margin-bottom: 8px; font-size: 14px; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Clamp distance text so it never overflows */
+#hotcold {
+  max-width: min(44vw, 560px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  #hotcold {
+    max-width: 90vw;
+    font-size: 14px;
+    opacity: 0.95;
+  }
+}
+
 
 /* center target icon */
 .map-banner .target svg{
@@ -938,5 +954,34 @@ label{ display:block; font-weight: 800; margin-bottom: 8px; font-size: 14px; }
   .cards-grid{ grid-template-columns: 1fr; }
   .langcards-grid{ grid-template-columns: 1fr; }
   .quiz-q{ font-size: 24px; }
+}
+/* ================= MOBILE MAP BANNER FIX ================= */
+@media (max-width: 480px) {
+  .map-banner {
+    height: auto;
+    padding: 10px 14px;
+    grid-template-columns: 1fr;
+    row-gap: 6px;
+    text-align: center;
+  }
+
+  .banner-left,
+  .banner-center,
+  .banner-right {
+    justify-self: center;
+  }
+
+  /* Order: target → distance → attempts */
+  .banner-center {
+    order: 1;
+  }
+
+  .banner-left {
+    order: 2;
+  }
+
+  .banner-right {
+    order: 3;
+  }
 }
 

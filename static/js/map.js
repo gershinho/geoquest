@@ -475,12 +475,14 @@ function onCountryClick(feature, layer){
   try {
     let hotcoldText = "";
     if (hc && typeof hc.distance === 'number') {
-      const km = Math.round(hc.distance);
-      // format with thousands separators
-      hotcoldText = `${km.toLocaleString()} km away`;
-      if (hc.close) hotcoldText += ` — Close`;
-      else hotcoldText += ` — Not close`;
-    }
+  const km = Math.round(hc.distance).toLocaleString();
+  const isMobile = window.innerWidth < 480;
+
+  hotcoldText = isMobile
+    ? `${km} km`
+    : `${km} km away — ${hc.close ? "Close" : "Not close"}`;
+}
+
     document.getElementById("hotcold").textContent = hotcoldText;
   } catch(e){ console.warn('hotCold display error', e); }
 
