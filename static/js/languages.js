@@ -35,14 +35,14 @@ function drawAtlas(canvas, places, focus) {
   const centerLat = focus ? Math.max(-58, Math.min(58, latitude)) : latitude;
   const project = (lon, lat) => [width / 2 + (lon - longitude) * width / span, height / 2 - (lat - centerLat) * width / span];
   const matchCodes = new Set(places.map(place => place.cca3));
-  ctx.fillStyle = "#e3f2f5";
+  ctx.fillStyle = "#d4e2d9";
   ctx.fillRect(0, 0, width, height);
   for (const feature of geography.features) {
     const selected = matchCodes.has(countryFeatureCode(feature));
     const { type, coordinates } = feature.geometry;
     const polygons = type === "Polygon" ? [coordinates] : coordinates;
-    ctx.fillStyle = selected ? "#27957f" : "#bed2d8";
-    ctx.strokeStyle = "#f8fafc";
+    ctx.fillStyle = selected ? "#28795e" : "#b8c7b1";
+    ctx.strokeStyle = "#fff5dd";
     ctx.lineWidth = 0.8;
     for (const rings of polygons) {
       const firstLongitude = rings[0][0][0];
@@ -67,7 +67,7 @@ function drawAtlas(canvas, places, focus) {
     const [x, y] = project(lon, lat);
     ctx.beginPath();
     ctx.arc(x, y, focus ? 7 : 3.3, 0, 2 * Math.PI);
-    ctx.fillStyle = "#116659";
+    ctx.fillStyle = "#365849";
     ctx.fill();
     ctx.strokeStyle = "white";
     ctx.lineWidth = focus ? 2.4 : 1;

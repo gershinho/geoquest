@@ -9,26 +9,14 @@
   ("slate", "Slate", "Stomps and sends pebbles hopping")
 ] %}
 {% block head_extra %}
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/avatars.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 {% endblock %}
 {% block content %}
 <div class="lantern-home">
-    <header class="home-header">
-      <nav class="home-nav home-frame" aria-label="GeoQuest">
-        <a class="home-brand" href="{{ url_for('home') }}" aria-label="GeoQuest home"><span class="home-compass" aria-hidden="true"></span>GeoQuest</a>
-        <div class="home-nav-links">
-          <a href="{{ url_for('home') }}" aria-current="page">Home</a>
-          <a href="{{ url_for('flags_setup') }}">Flags</a>
-          <a href="{{ url_for('map_setup') }}">Map</a>
-          <a href="{{ url_for('languages') }}">Languages</a>
-        </div>
-      </nav>
-    </header>
     <main>
       <div class="home-night">
-        <section class="home-hero home-frame" aria-labelledby="hero-title">
+        <section class="home-hero site-frame" aria-labelledby="hero-title">
           <div class="home-hero-art" aria-hidden="true"></div>
           <div class="home-intro">
             <h1 id="hero-title">Learn geography <span>by playing.</span></h1>
@@ -38,24 +26,20 @@
               <a class="home-action" href="{{ url_for('map_setup') }}">Map Challenge</a>
             </div>
           </div>
-          <div class="hero-avatar" id="hero-avatar" data-motion="paused">
+          <div class="hero-avatar" id="hero-avatar">
             <div class="avatar-stage" data-avatar="nia" aria-hidden="true">
-              <span class="avatar-sprite" id="selected-avatar"></span>
+              <span class="avatar-sprite"></span>
               <span class="avatar-effect"></span>
             </div>
             <div class="avatar-actions">
               <button class="home-avatar-button" id="change-avatar" type="button" aria-haspopup="dialog">
                 Change avatar
               </button>
-              <button class="home-avatar-button avatar-motion" id="avatar-motion" type="button"
-                      aria-label="Play avatar animation" title="Play avatar animation">
-                <span aria-hidden="true"></span>
-              </button>
-            </div>
+              </div>
           </div>
         </section>
       </div>
-      <div class="home-content home-frame">
+      <div class="home-content site-frame">
         <section aria-labelledby="challenges-title">
           <h2 class="home-section-title" id="challenges-title">Choose your challenge</h2>
           <div class="home-challenges">

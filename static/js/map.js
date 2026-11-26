@@ -7,10 +7,10 @@ const regionViews = {
   Oceania: [[-52, 111], [23, 225]],
 };
 const countryStyles = {
-  default: { color: "#f8fafc", weight: 1.2, fillColor: "#263d55", fillOpacity: 1 },
-  context: { color: "#a6c2cf", weight: 1, fillColor: "#58748a", fillOpacity: 1 },
-  wrong: { color: "#fff", weight: 1.5, fillColor: "#e66b55", fillOpacity: 1 },
-  correct: { color: "#fff", weight: 2, fillColor: "#10b981", fillOpacity: 1 },
+  default: { color: "#fff5dd", weight: 1.2, fillColor: "#294658", fillOpacity: 1 },
+  context: { color: "#b2c2b8", weight: 1, fillColor: "#5b7280", fillOpacity: 1 },
+  wrong: { color: "#fff", weight: 1.5, fillColor: "#a34e3d", fillOpacity: 1 },
+  correct: { color: "#fff", weight: 2, fillColor: "#28795e", fillOpacity: 1 },
 };
 
 const mapElement = id => document.getElementById(id);
@@ -163,7 +163,7 @@ function showAnswer() {
   const realm = target.location[2];
   revealLayer?.remove();
   revealLayer = L.circleMarker(point, {
-    radius: 9, color: "white", fillColor: "#10b981", fillOpacity: 1, weight: 3, interactive: false,
+    radius: 9, color: countryStyles.correct.color, fillColor: countryStyles.correct.fillColor, fillOpacity: 1, weight: 3, interactive: false,
   }).addTo(map);
   revealLayer.bindTooltip(target.name, { permanent: true, direction: "top" });
   return realm;
@@ -212,7 +212,7 @@ function selectCountry(country) {
   const clue = `Try ${direction} of ${country.name} · about ${km} km between reference points.`;
   guessLayer?.remove();
   guessLayer = L.circleMarker(from, {
-    radius: 6, color: "white", fillColor: "#e66b55", fillOpacity: 1, weight: 2, interactive: false,
+    radius: 6, color: countryStyles.wrong.color, fillColor: countryStyles.wrong.fillColor, fillOpacity: 1, weight: 2, interactive: false,
   }).addTo(map);
   if (attempts >= maxAttempts) {
     finishQuestion("missed", `${target.name} is ${direction} of ${country.name} · about ${km} km.`);

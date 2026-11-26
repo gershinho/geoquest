@@ -2,13 +2,12 @@
 {% set title="Language Explorer" %}
 {% block content %}
 <main class="page language-page">
-  <header class="round-nav">
-    <a class="topbar-home" href="/">‹ Home</a>
+  <header class="language-header">
+    <h1>Language Explorer</h1>
     <button class="btn btn-primary" id="quiz-toggle" type="button" disabled>Start language quiz</button>
   </header>
 
   <div id="lang-app">
-    <h1>Language Explorer</h1>
     <p class="muted">See where languages are listed across countries and territories. <a class="text-link" href="https://restcountries.com/">Country data source</a></p>
     <div class="language-tabs" aria-label="Browse languages">
       <button class="btn btn-outline" id="by-language" aria-pressed="true" type="button">By language</button>
