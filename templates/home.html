@@ -9,63 +9,102 @@
   ("slate", "Slate", "Stomps and sends pebbles hopping")
 ] %}
 {% block head_extra %}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/avatars.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 {% endblock %}
 {% block content %}
-  <div class="page hero-page">
-    <div class="hero">
-      <div class="hero-left">
-        <h1 class="hero-title">
-          <span class="hero-title-strong">Learn Geography</span><br>
-          <span class="hero-title-accent">by Playing</span>
-        </h1>
-        <p class="hero-sub">
-          Master world flags, locate countries on the map, and<br>
-          discover languages spoken around the globe <br>
-        </p>
-
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="/flags">
-            <span class="icon">
-              <!-- flag -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 22V4"></path>
-                <path d="M4 4h12l-2 5 2 5H4"></path>
-              </svg>
-            </span>
-            Start with Flags
-            <span class="chev">›</span>
-          </a>
-          <a class="btn btn-outline" href="/map">
-            <span class="icon">
-              <!-- pin -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path>
-                <circle cx="12" cy="11" r="2"></circle>
-              </svg>
-            </span>
-            Map Challenge
-          </a>
+<div class="lantern-home">
+    <header class="home-header">
+      <nav class="home-nav home-frame" aria-label="GeoQuest">
+        <a class="home-brand" href="{{ url_for('home') }}" aria-label="GeoQuest home"><span class="home-compass" aria-hidden="true"></span>GeoQuest</a>
+        <div class="home-nav-links">
+          <a href="{{ url_for('home') }}" aria-current="page">Home</a>
+          <a href="{{ url_for('flags_setup') }}">Flags</a>
+          <a href="{{ url_for('map_setup') }}">Map</a>
+          <a href="{{ url_for('languages') }}">Languages</a>
         </div>
+      </nav>
+    </header>
+    <main>
+      <div class="home-night">
+        <section class="home-hero home-frame" aria-labelledby="hero-title">
+          <div class="home-hero-art" aria-hidden="true"></div>
+          <div class="home-intro">
+            <h1 id="hero-title">Learn geography <span>by playing.</span></h1>
+            <p>Identify world flags, find countries on the map, and explore the languages spoken around the globe.</p>
+            <div class="home-actions">
+              <a class="home-action home-primary" href="{{ url_for('flags_setup') }}">Start with Flags <span aria-hidden="true">→</span></a>
+              <a class="home-action" href="{{ url_for('map_setup') }}">Map Challenge</a>
+            </div>
+          </div>
+          <div class="hero-avatar" id="hero-avatar" data-motion="paused">
+            <div class="avatar-stage" data-avatar="nia" aria-hidden="true">
+              <span class="avatar-sprite" id="selected-avatar"></span>
+              <span class="avatar-effect"></span>
+            </div>
+            <div class="avatar-actions">
+              <button class="home-avatar-button" id="change-avatar" type="button" aria-haspopup="dialog">
+                Change avatar
+              </button>
+              <button class="home-avatar-button avatar-motion" id="avatar-motion" type="button"
+                      aria-label="Play avatar animation" title="Play avatar animation">
+                <span aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
-
-      <div class="hero-avatar" id="hero-avatar" data-motion="paused">
-        <div class="avatar-stage" data-avatar="nia" aria-hidden="true">
-          <span class="avatar-route"></span>
-          <span class="avatar-shadow"></span>
-          <span class="avatar-sprite" id="selected-avatar"></span>
-          <span class="avatar-effect"></span>
-        </div>
-        <div class="avatar-actions">
-          <button class="btn btn-outline btn-sm" id="change-avatar" type="button" aria-haspopup="dialog">
-            Change avatar
-          </button>
-          <button class="btn btn-outline avatar-motion" id="avatar-motion" type="button" aria-label="Play avatar animation" title="Play avatar animation">
-            <span aria-hidden="true"></span>
-          </button>
-        </div>
+      <div class="home-content home-frame">
+        <section aria-labelledby="challenges-title">
+          <h2 class="home-section-title" id="challenges-title">Choose your challenge</h2>
+          <div class="home-challenges">
+            <a class="home-challenge" href="{{ url_for('flags_setup') }}">
+              <span class="home-glyph" aria-hidden="true">⚑</span>
+              <div>
+                <h3>Flag Challenge</h3>
+                <p>Identify countries by their flags.</p>
+              </div>
+              <span class="home-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="home-challenge home-map" href="{{ url_for('map_setup') }}">
+              <span class="home-glyph" aria-hidden="true">⌖</span>
+              <div>
+                <h3>Map Challenge</h3>
+                <p>Find countries on an interactive map.</p>
+              </div>
+              <span class="home-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="home-challenge home-language" href="{{ url_for('languages') }}">
+              <span class="home-glyph" aria-hidden="true">A 文</span>
+              <div>
+                <h3>Language Explorer</h3>
+                <p>Explore where languages are used.</p>
+              </div>
+              <span class="home-arrow" aria-hidden="true">›</span>
+            </a>
+          </div>
+        </section>
+        <section class="home-journal" aria-labelledby="journal-title">
+          <h2 class="home-section-title" id="journal-title">Field journal</h2>
+          <dl class="home-stats">
+            <div>
+              <dt>Flags mastered</dt>
+              <dd id="stat-flags">0</dd>
+              <dd class="home-review"><a id="review-flags" href="{{ url_for('flags_play', review=1) }}" hidden></a></dd>
+            </div>
+            <div>
+              <dt>Locations mastered</dt>
+              <dd id="stat-located">0</dd>
+              <dd class="home-review"><a id="review-map" href="{{ url_for('map_play', review=1) }}" hidden></a></dd>
+            </div>
+            <div><dt>Day streak</dt><dd id="stat-streak">0</dd></div>
+            <div><dt>Accuracy</dt><dd id="stat-acc">—</dd></div>
+          </dl>
+          <p class="home-recall-note">Master a flag by typing its country correctly on two different days. Master a location by finding it on the first try on two different days.</p>
+        </section>
       </div>
-    </div>
+    </main>
 
     <dialog class="avatar-picker" id="avatar-picker" aria-labelledby="avatar-picker-title">
       <div class="avatar-picker-heading">
@@ -83,98 +122,7 @@
         {% endfor %}
       </div>
     </dialog>
-
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-icon i-green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4"></path><path d="M4 4h12l-2 5 2 5H4"></path></svg>
-        </div>
-        <div class="stat-meta">
-          <div class="stat-label">Flags Mastered</div>
-          <div class="stat-value" id="stat-flags">0</div>
-          <a class="review-link" id="review-flags" href="/flags/play?review=1" hidden></a>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon i-blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
-        </div>
-        <div class="stat-meta">
-          <div class="stat-label">Locations Mastered</div>
-          <div class="stat-value" id="stat-located">0</div>
-          <a class="review-link" id="review-map" href="/map/play?review=1" hidden></a>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon i-orange">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 3 4 3 4 7a4 4 0 0 1-8 0c0-4 3-4 4-7Z"></path><path d="M6 14a6 6 0 1 0 12 0"></path></svg>
-        </div>
-        <div class="stat-meta">
-          <div class="stat-label">Day Streak</div>
-          <div class="stat-value" id="stat-streak">0</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon i-purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3"></path><path d="M12 19v3"></path><path d="M2 12h3"></path><path d="M19 12h3"></path></svg>
-        </div>
-        <div class="stat-meta">
-          <div class="stat-label">Accuracy</div>
-          <div class="stat-value" id="stat-acc">—</div>
-        </div>
-      </div>
-    </div>
-
-    <p class="recall-note">Master a flag by typing its country correctly on two different days. Master a location by finding it on the first try on two different days.</p>
-
-    <section class="section">
-      <h2 class="section-title">Choose Your Challenge</h2>
-
-      <div class="challenge-grid">
-        <a class="challenge-card" href="/flags">
-          <div class="cc-left">
-            <div class="cc-icon i-green">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22V4"></path><path d="M4 4h12l-2 5 2 5H4"></path></svg>
-            </div>
-          </div>
-          <div class="cc-body">
-            <div class="cc-title">Flag Challenge</div>
-            <div class="cc-sub">Identify countries by their flags with multiple-choice questions.</div>
-          </div>
-          <div class="cc-arrow">›</div>
-        </a>
-
-        <a class="challenge-card" href="/map">
-          <div class="cc-left">
-            <div class="cc-icon i-blue">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
-            </div>
-          </div>
-          <div class="cc-body">
-            <div class="cc-title">Map Challenge</div>
-            <div class="cc-sub">Click the correct country on an interactive world map.</div>
-          </div>
-          <div class="cc-arrow">›</div>
-        </a>
-
-        <a class="challenge-card" href="/languages">
-          <div class="cc-left">
-            <div class="cc-icon i-purple">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h7"></path><path d="M7 5v14"></path><path d="M15 5h5"></path><path d="M17 5c0 6-2 10-6 14"></path><path d="M16 12c1.5 2 3 3 4 3"></path></svg>
-            </div>
-          </div>
-          <div class="cc-body">
-            <div class="cc-title">Language Explorer</div>
-            <div class="cc-sub">Explore where languages are listed and quiz yourself on language geography.</div>
-          </div>
-          <div class="cc-arrow">›</div>
-        </a>
-      </div>
-    </section>
-  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

@@ -1,57 +1,5 @@
-.hero-avatar{
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-}
-.avatar-stage{
-  isolation: isolate;
-  position: relative;
-  width: min(100%, 246px);
-  height: 184px;
-  display: grid;
-  place-items: center;
-}
-.avatar-stage::before{
-  content: "";
-  position: absolute;
-  z-index: -2;
-  inset: 22px 10px 14px;
-  border-radius: 25px;
-  border: 1px solid #d7e3d9;
-  background:
-    repeating-linear-gradient(0deg, transparent 0 20px, #e0eae5 20px 21px),
-    repeating-linear-gradient(90deg, transparent 0 20px, #e0eae5 20px 21px),
-    #f5faf5;
-  transform: rotate(-6deg);
-}
-.avatar-route{
-  position: absolute;
-  z-index: -1;
-  inset: 37px 17px 29px;
-  border-radius: 50%;
-  border: 1px dashed #83a49b;
-  transform: rotate(-25deg);
-}
-.avatar-route::after{
-  content: "";
-  position: absolute;
-  right: 14px;
-  top: 24px;
-  width: 8px;
-  height: 8px;
-  background: #b75e3d;
-  border: 2px solid #f5faf5;
-  border-radius: 50%;
-}
-.avatar-shadow{
-  position: absolute;
-  z-index: -1;
-  bottom: 13px;
-  width: 68px;
-  height: 11px;
-  border-radius: 50%;
-  background: #1f493a20;
-}
+.avatar-stage { position: relative; }
+
 .avatar-sprite{
   display: block;
   width: var(--avatar-size, 164px);
@@ -158,19 +106,17 @@
 }
 
 .avatar-actions{ display: flex; align-items: center; gap: 6px; }
-.avatar-actions .btn{ min-height: 40px; }
-.avatar-motion{ width: 40px; padding: 0; justify-content: center; }
 .avatar-motion span{
   width: 0;
   height: 0;
   border: solid transparent;
   border-width: 5px 0 5px 8px;
-  border-left-color: #334155;
+  border-left-color: currentColor;
 }
 .hero-avatar[data-motion="playing"] .avatar-motion span{
   width: 9px;
   height: 10px;
-  border: solid #334155;
+  border: solid currentColor;
   border-width: 0 3px;
 }
 .avatar-picker{
@@ -216,20 +162,6 @@
   .avatar-motion{ display: none; }
 }
 
-@media (max-width: 1050px){
-  .hero-avatar{
-    grid-template-columns: minmax(80px, 125px) minmax(100px, 1fr);
-    align-items: center;
-    justify-items: start;
-    gap: 10px;
-  }
-  .avatar-actions{ flex-wrap: wrap; }
-  .avatar-stage{ width: 100%; height: 123px; }
-  .avatar-stage::before{ inset: 12px 6px; }
-  .avatar-route{ inset: 20px 9px; }
-  .avatar-shadow{ bottom: 12px; width: 42px; height: 7px; }
-  .avatar-stage .avatar-sprite{ --avatar-size: min(100%, 102px); }
-}
 @media (max-width: 520px){
   .avatar-options{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
