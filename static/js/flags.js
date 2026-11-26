@@ -1,19 +1,3 @@
-
-let COUNTRIES = [];
-let quizMode = sessionStorage.getItem('geoquest_flag_mode') || 'mc'; // 'mc' or 'type'
-let _rawTotal = sessionStorage.getItem("geoquest_flag_total") || "10";
-let state = {
-  difficulty: sessionStorage.getItem("geoquest_flag_difficulty") || "easy",
-  // support 'unlimited' value
-  total: (_rawTotal === 'unlimited') ? Infinity : parseInt(_rawTotal || "10", 10),
-  qIndex: 0,
-  score: 0,
-  streak: 0,
-  locked: false,
-  current: null,
-  options: [],
-};
-
 const EASY_COMMON = new Set([
   "USA","CAN","MEX","BRA","ARG","CHL","COL","PER",
   "GBR","IRL","FRA","DEU","ESP","PRT","ITA","NLD","BEL","CHE","AUT","SWE","NOR","DNK","FIN","POL","UKR","GRC","TUR",
@@ -23,285 +7,160 @@ const EASY_COMMON = new Set([
   "AUS","NZL"
 ]);
 
-function byDifficulty(list){
-  if (state.difficulty === "easy") {
-    const filtered = list.filter(c => EASY_COMMON.has(c.cca3));
-    return filtered.length >= 30 ? filtered : list;
-  }
-  if (state.difficulty === "medium") {
-    // medium = most countries, exclude tiny territories if missing flag
-    return list.filter(c => c.flag && c.name && c.cca3);
-  }
-  // hard = all countries but bias target selection toward less-populous (more unique) countries
-  return list.filter(c => c.flag && c.name && c.cca3);
+const commonNames = {
+  CIV: ["Ivory Coast"], CZE: ["Czech Republic"], DOM: ["Dominican Rep"],
+  GBR: ["UK", "Great Britain", "Britain"], KOR: ["Republic of Korea"],
+  PRK: ["DPRK"], TLS: ["East Timor"], TUR: ["Turkey"],
+  USA: ["US", "USA", "United States of America"], ARE: ["UAE"], SWZ: ["Swaziland"],
+  CPV: ["Cabo Verde", "Cape Verde"], MMR: ["Burma"], VNM: ["Viet Nam"],
+};
+const flagElement = id => document.getElementById(id);
+const isReview = new URLSearchParams(location.search).has("review");
+const difficulty = sessionStorage.getItem("geoquest_flag_difficulty") || "easy";
+const configuredTotal = sessionStorage.getItem("geoquest_flag_total");
+const roundLength = configuredTotal === "unlimited" ? Infinity : Number(configuredTotal) || 10;
+const typed = isReview || sessionStorage.getItem("geoquest_flag_mode") === "type";
+
+let countries, pool, queue, entries, target, locked, unlimited;
+
+function normalizeAnswer(value) {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function pickWeightedTarget(pool){
-  if (state.difficulty !== 'hard') return pool[Math.floor(Math.random()*pool.length)];
-  // If population data exists, bias selection toward lower-population countries (more unique)
-  const withPop = pool.filter(p => typeof p.population === 'number' && p.population > 0);
-  if (withPop.length >= 8){
-    // compute weight = 1 / sqrt(population) to favor smaller countries
-    const weights = withPop.map(p => 1 / Math.sqrt(p.population));
-    const totalW = weights.reduce((a,b)=>a+b,0);
-    let r = Math.random() * totalW;
-    for (let i=0;i<withPop.length;i++){
-      r -= weights[i];
-      if (r <= 0) return withPop[i];
-    }
-    return withPop[withPop.length-1];
-  }
-  // fallback: pick random
-  return pool[Math.floor(Math.random()*pool.length)];
+function setupPool() {
+  const easy = countries.filter(country => EASY_COMMON.has(country.cca3));
+  return difficulty === "easy" && easy.length >= 4 ? easy : countries;
 }
 
-function setHUD(){
-  document.getElementById("hud-score").textContent = state.score;
-  document.getElementById("hud-total").textContent = (state.total === Infinity) ? '∞' : state.total;
-  document.getElementById("hud-streak").textContent = state.streak;
+function updateHUD() {
+  const number = entries.length + (locked ? 0 : 1);
+  flagElement("flag-progress").textContent = unlimited ? `Question ${number}` : `Question ${number} of ${queue.length}`;
+  flagElement("hud-score").textContent = entries.filter(entry => entry.outcome === "correct").length;
 }
 
-function setBestPill(){
-  const s = loadStats();
-  document.getElementById("best-pill").textContent = `🏆 Best: ${s.bestFlags || 0}`;
-}
-
-function pickQuestion(){
-  const pool = byDifficulty(COUNTRIES);
-  const target = pickWeightedTarget(pool);
-  let distractPool = pool.filter(c => c.cca3 !== target.cca3);
-
-  if (state.difficulty === "hard" && target.region) {
-    const sameRegion = distractPool.filter(c => c.region === target.region);
-    if (sameRegion.length >= 8) distractPool = sameRegion;
-  }
-
-  const distractors = shuffle(distractPool).slice(0, 3);
-  const options = shuffle([target, ...distractors]);
-  state.current = target;
-  state.options = options;
-  state.locked = false;
-
-  // render
-  const img = document.getElementById("flag-img");
-  img.src = target.flag;
-  img.onload = () => {};
-  img.onerror = () => { img.alt = "Flag (failed to load)"; };
-
-  const opts = document.getElementById("options");
-  opts.innerHTML = "";
-  const typeArea = document.getElementById('flag-type-area');
-  const inputEl = document.getElementById('flag-input');
-  if (quizMode === 'type'){
-    // hide MC options, show input
-    if (opts) opts.style.display = 'none';
-    if (typeArea) { typeArea.style.display = 'block'; if (inputEl) { inputEl.value = ''; inputEl.disabled = false; inputEl.focus(); } }
-  } else {
-    if (opts) opts.style.display = '';
-    if (typeArea) typeArea.style.display = 'none';
-    options.forEach((c) => {
-      const b = document.createElement("button");
-      b.className = "option";
-      b.innerHTML = `<span>${c.name}</span><span class="mark"></span>`;
-      b.addEventListener("click", () => onPick(c, b));
-      opts.appendChild(b);
-    });
-  }
-
-  // hide panels
-  const fbEl = document.getElementById("feedback"); if (fbEl) fbEl.hidden = true;
-  const nextBtnEl = document.getElementById("next-btn"); if (nextBtnEl) nextBtnEl.disabled = true;
-  // ensure typed input enabled for type mode
-  try { const input = document.getElementById('flag-input'); if (input) input.disabled = false; } catch(e){}
-}
-
-function markAll(correctCca3, chosenCca3){
-  const opts = document.querySelectorAll(".option");
-  opts.forEach((el) => {
-    const name = el.querySelector("span").textContent;
-    const c = state.options.find(x => x.name === name);
-    if (!c) return;
-    const mark = el.querySelector(".mark");
-    if (c.cca3 === correctCca3) {
-      el.classList.add("correct");
-      mark.innerHTML = "✓";
-    }
-    if (c.cca3 === chosenCca3 && chosenCca3 !== correctCca3) {
-      el.classList.add("wrong");
-      mark.innerHTML = "✕";
-    }
-    el.disabled = true;
-  });
-}
-
-// learn-more UI removed — no-op placeholder kept for safety (not used)
-function showLearnMore(country){}
-
-function onPick(chosen, btnEl){
-  if (state.locked) return;
-  state.locked = true;
-
-  const correct = chosen.cca3 === state.current.cca3;
-
-  const fbEl = document.getElementById("feedback");
-  const nextBtnEl = document.getElementById("next-btn");
-
-  // update streak + stats
-  const s = loadStats();
-  bumpStreak(s);
-  if (correct) {
-    state.score += 1;
-    state.streak += 1;
-    s.flagsCorrect = (s.flagsCorrect || 0) + 1;
-  } else {
-    state.streak = 0;
-  }
-  s.flagsTotal = (s.flagsTotal || 0) + 1;
-  if (state.score > (s.bestFlags || 0)) s.bestFlags = state.score;
-  saveStats(s);
-
-  setHUD();
-  setBestPill();
-
-  markAll(state.current.cca3, chosen.cca3);
-
-  const fb = document.getElementById("feedback");
-  if (fbEl){
-    fbEl.hidden = false;
-    fbEl.className = "feedback " + (correct ? "good" : "bad");
-    fbEl.textContent = correct ? `Correct: ${state.current.name}` : `Incorrect: it's ${state.current.name}`;
-  }
-  if (nextBtnEl) nextBtnEl.disabled = false;
-}
-
-function normalizeFlagAnswer(s){
-  return (s||'').trim().toLowerCase();
-}
-
-function handleTypedFlag(val){
-  if (state.locked) return;
-  state.locked = true;
-
-  const s = loadStats();
-  bumpStreak(s);
-
-  const user = normalizeFlagAnswer(val);
-  const correctName = normalizeFlagAnswer(state.current.name);
-  const correct = user === correctName;
-
-  if (correct) {
-    state.score += 1;
-    state.streak += 1;
-    s.flagsCorrect = (s.flagsCorrect || 0) + 1;
-  } else {
-    state.streak = 0;
-  }
-  s.flagsTotal = (s.flagsTotal || 0) + 1;
-  if (state.score > (s.bestFlags || 0)) s.bestFlags = state.score;
-  saveStats(s);
-
-  setHUD();
-  setBestPill();
-
-  // show feedback
-  const fbEl = document.getElementById('feedback'); if (fbEl){
-    fbEl.hidden = false;
-    fbEl.className = 'feedback ' + (correct ? 'good' : 'bad');
-    fbEl.textContent = correct ? `Correct: ${state.current.name}` : `Incorrect: ${state.current.name}`;
-  }
-
-  // disable input and enable next
-  try { const input = document.getElementById('flag-input'); if (input) input.disabled = true; } catch(e){}
-  try { const nextBtnEl = document.getElementById('next-btn'); if (nextBtnEl) nextBtnEl.disabled = false; } catch(e){}
-}
-
-function next(){
-  state.qIndex += 1;
-  if (state.qIndex >= state.total) {
-    // simple end state: go home
-    window.location.href = "/";
+function renderChoices() {
+  flagElement("flag-type-area").hidden = !typed;
+  const options = flagElement("options");
+  options.hidden = typed;
+  options.replaceChildren();
+  if (typed) {
+    flagElement("flag-input").value = "";
+    flagElement("flag-input").disabled = false;
     return;
   }
-  pickQuestion();
-}
-
-function resetRun(){
-  state.qIndex = 0;
-  state.score = 0;
-  state.streak = 0;
-  setHUD();
-  pickQuestion();
-}
-
-async function init(){
-  setBestPill();
-
-  // load countries
-  const resp = await fetch("/api/countries");
-  const data = await resp.json();
-  COUNTRIES = (data.countries || []).filter(c => c.flag && c.name);
-
-  setHUD();
-  pickQuestion();
-
-  document.getElementById("next-btn").addEventListener("click", next);
-  document.getElementById("hud-reset").addEventListener("click", resetRun);
-
-  // add a small mode selector to the topbar for discoverability (MC vs Type)
-  try {
-    const topbar = document.querySelector('.topbar');
-    if (topbar && !document.getElementById('flag-mode-top')){
-      const sel = document.createElement('select');
-      sel.id = 'flag-mode-top';
-      sel.style.marginLeft = '12px';
-      sel.style.padding = '6px';
-      sel.style.fontWeight = '700';
-      const optMc = document.createElement('option'); optMc.value='mc'; optMc.textContent='MC';
-      const optType = document.createElement('option'); optType.value='type'; optType.textContent='Type';
-      sel.appendChild(optMc); sel.appendChild(optType);
-      sel.value = quizMode;
-      sel.addEventListener('change', (e)=>{
-        quizMode = e.target.value;
-        sessionStorage.setItem('geoquest_flag_mode', quizMode);
-        // refresh current question UI
-        pickQuestion();
-      });
-      const hud = document.querySelector('.topbar-right');
-      if (hud && hud.parentNode) hud.parentNode.insertBefore(sel, hud);
-    }
-  } catch(e){}
-
-  // wire typed input submit if present
-  try {
-    const submit = document.getElementById('flag-submit');
-    const input = document.getElementById('flag-input');
-    if (submit && input){
-      submit.addEventListener('click', ()=>{
-        const v = (input.value || '').trim();
-        if (!v) return;
-        handleTypedFlag(v);
-      });
-      input.addEventListener('keydown',(ev)=>{ if (ev.key === 'Enter') { ev.preventDefault(); submit.click(); } });
-    }
-  } catch(e){}
-
-  // accordion / learn-more removed — no-op if elements missing
-  const toggle = document.getElementById("learn-toggle");
-  if (toggle){
-    toggle.addEventListener("click", () => {
-      const open = toggle.getAttribute("data-open") === "1";
-      toggle.setAttribute("data-open", open ? "0" : "1");
-      const panel = document.getElementById("learn-panel");
-      if (panel) panel.hidden = open;
-      const chev = toggle.querySelector(".acc-chev"); if (chev) chev.textContent = open ? "⌃" : "⌄";
-    });
+  const distractors = pool.filter(country => country.cca3 !== target.cca3);
+  const similar = distractors.filter(country => country.region === target.region);
+  const use = difficulty === "hard" && similar.length >= 3 ? similar : distractors;
+  for (const country of shuffle([target, ...shuffle(use).slice(0, 3)])) {
+    const button = document.createElement("button");
+    button.className = "option";
+    button.type = "button";
+    button.textContent = country.name;
+    button.dataset.code = country.cca3;
+    button.onclick = () => answer(country === target, country.cca3);
+    options.append(button);
   }
 }
 
-init().catch(err => {
-  console.error(err);
-  const fb = document.getElementById("feedback");
-  fb.hidden = false;
-  fb.className = "feedback bad";
-  fb.textContent = "Failed to load country data. Check your internet connection and refresh.";
+function nextQuestion() {
+  if (unlimited && entries.length === queue.length) {
+    const previous = queue.at(-1);
+    const deck = shuffle(pool);
+    if (deck.length > 1 && deck[0] === previous) [deck[0], deck[1]] = [deck[1], deck[0]];
+    queue.push(...deck);
+  }
+  target = queue[entries.length];
+  locked = false;
+  flagElement("flag-img").src = target.flag;
+  flagElement("feedback").hidden = true;
+  flagElement("next-btn").hidden = true;
+  flagElement("flag-reveal").hidden = false;
+  flagElement("finish-flags").disabled = entries.length === 0;
+  renderChoices();
+  updateHUD();
+}
+
+function startRound(codes) {
+  const picked = codes?.map(code => countries.find(country => country.cca3 === code)).filter(Boolean);
+  unlimited = !picked?.length && roundLength === Infinity;
+  queue = picked?.length ? picked : shuffle(pool).slice(0, roundLength);
+  if (!picked?.length && !unlimited) {
+    while (queue.length < roundLength) queue.push(...shuffle(pool).slice(0, roundLength - queue.length));
+  }
+  entries = [];
+  nextQuestion();
+}
+
+function answer(correct, chosen) {
+  if (locked || !target) return;
+  locked = true;
+  entries.push({ id: target.cca3, label: target.name, outcome: correct ? "correct" : "missed" });
+
+  const stats = loadStats();
+  stats.flagsTotal += 1;
+  if (correct) stats.flagsCorrect += 1;
+  stats.bestFlags = Math.max(stats.bestFlags, entries.filter(entry => entry.outcome === "correct").length);
+  recordRecall(stats, "flags", target, correct ? (typed ? "recalled" : "recognized") : "missed");
+  bumpStreak(stats);
+  saveStats(stats);
+
+  for (const button of flagElement("options").children) {
+    button.disabled = true;
+    if (button.dataset.code === target.cca3) {
+      button.classList.add("correct");
+      button.textContent += " ✓";
+    } else if (button.dataset.code === chosen) {
+      button.classList.add("wrong");
+      button.textContent += " ✕";
+    }
+  }
+  const feedback = flagElement("feedback");
+  feedback.className = `feedback ${correct ? "good" : "bad"}`;
+  feedback.textContent = correct ? `Correct. This is ${target.name}.` : `This is ${target.name}.`;
+  feedback.hidden = false;
+  flagElement("flag-input").disabled = true;
+  flagElement("flag-reveal").hidden = true;
+  flagElement("finish-flags").disabled = false;
+  const next = flagElement("next-btn");
+  next.textContent = !unlimited && entries.length === queue.length ? "See results" : "Next flag";
+  next.hidden = false;
+  next.focus();
+  updateHUD();
+}
+
+function finishRound() {
+  showRoundResults(flagElement("flag-round"), entries, startRound, startRound);
+}
+
+async function init() {
+  const response = await fetch("/api/countries");
+  const data = await response.json();
+  countries = data.countries.filter(country => country.flag && country.name && country.cca3);
+  if (!countries.length) throw new Error("No flags available");
+  pool = setupPool();
+  flagElement("flag-type-area").onsubmit = event => {
+    event.preventDefault();
+    const value = normalizeAnswer(flagElement("flag-input").value);
+    if (!value) return;
+    const names = [target.name, ...(commonNames[target.cca3] || [])];
+    answer(names.some(name => normalizeAnswer(name) === value));
+  };
+  flagElement("flag-reveal").onclick = () => answer(false);
+  flagElement("finish-flags").onclick = finishRound;
+  flagElement("next-btn").onclick = () => {
+    if (!unlimited && entries.length === queue.length) finishRound();
+    else {
+      nextQuestion();
+      if (typed) flagElement("flag-input").focus();
+      else flagElement("options").querySelector("button")?.focus();
+    }
+  };
+  startRound(isReview ? dueCountries(loadStats(), "flags").slice(0, 10) : undefined);
+}
+
+init().catch(error => {
+  console.error(error);
+  const feedback = flagElement("feedback");
+  feedback.textContent = "The flags could not load. Refresh the page to try again.";
+  feedback.hidden = false;
 });

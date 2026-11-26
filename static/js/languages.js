@@ -1,641 +1,329 @@
-let COUNTRIES = [];
-let VIEW = "by-language"; // explore | by-language
-let quizOn = false;
+const langElement = id => document.getElementById(id);
+let countries = [];
+let geography;
+let languageIndex = [];
+let officialFacts = [];
+let selectedLanguage = "";
+let view = "language";
+let quizOpen = false;
+let quizQueue, quizEntries, question;
 
-let region = "All Regions";
-
-let LANGUAGE_OVERRIDES = {};
-
-// Quiz settings
-let quizSettings = {
-  questionTypes: ['flag-to-lang', 'lang-to-country', 'country-count', 'region-lang'],
-  currentType: null
-};
-
-const explicitPills = {
-  "English": "p-blue",
-  "French": "p-purple",
-  "Arabic": "p-green",
-  "Spanish": "p-orange",
-  "Portuguese": "p-green",
-  "German": "p-gray",
-  "Chinese": "p-red",
-  "Russian": "p-blue",
-  "Italian": "p-gray",
-};
-
-const colorClasses = ["p-blue","p-purple","p-green","p-orange","p-gray","p-red"];
-
-function hash(str){
-  let h = 0;
-  for (let i=0;i<str.length;i++) h = ((h<<5)-h) + str.charCodeAt(i), h |= 0;
-  return h;
-}
-function pillClassFor(lang){
-  if (explicitPills[lang]) return explicitPills[lang];
-  const idx = Math.abs(hash(lang)) % colorClasses.length;
-  return colorClasses[idx];
+function node(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text) element.textContent = text;
+  return element;
 }
 
-function el(tag, attrs={}, children=[]){
-  const n = document.createElement(tag);
-  for (const [k,v] of Object.entries(attrs)){
-    if (k === "class") n.className = v;
-    else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
-    else if (k === "html") n.innerHTML = v;
-    else n.setAttribute(k, v);
-  }
-  for (const c of children){
-    if (c == null) continue;
-    n.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return n;
+async function getJSON(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not load ${url}`);
+  return response.json();
 }
 
-function uniq(arr){
-  return [...new Set(arr)];
+function languageNames(raw) {
+  const values = raw.languages || [];
+  return Object.values(values).filter(value => typeof value === "string" && value.trim()).map(value => value.trim());
 }
 
-function allRegions(){
-  const rs = uniq(COUNTRIES.map(c => c.region).filter(Boolean)).sort();
-  return ["All Regions", ...rs];
-}
-
-function normalizeCountry(raw){
-  const name = raw.name?.common || raw.name || "Unknown";
-  const region = raw.region || "—";
-  const flag = raw.flags?.png || raw.flag || "";
-  const langs = raw.languages ? Object.values(raw.languages) : (raw.languages || []);
-  return { name, region, flag, languages: langs.filter(Boolean) };
-}
-
-async function loadCountries(){
-  // For the Language Explorer, try to load richer data from the RapidAPI-backed
-  // proxy endpoint `/api/languages_remote` (server must set RAPIDAPI_URL and RAPIDAPI_KEY).
-  // Fall back to the default `/api/countries` if the remote proxy is unavailable.
-  const [resp, overridesResp] = await Promise.all([
-    fetch('/api/languages_remote').catch(()=>fetch('/api/countries')),
-    fetch("/static/data/language_overrides.json").catch(()=>({ ok:false }))
-  ]);
-  const data = await resp.json();
-  let overrides = {};
-  try {
-    if (overridesResp && overridesResp.ok) overrides = await overridesResp.json();
-  } catch(e){ overrides = {}; }
-  LANGUAGE_OVERRIDES = overrides || {};
-
-  COUNTRIES = (data.countries || []).map(normalizeCountry);
-
-  // apply overrides: merge addLanguages and primaryLanguage when provided
-  for (const c of COUNTRIES){
-    const o = LANGUAGE_OVERRIDES[c.name];
-    if (!o) continue;
-    // add missing languages
-    if (o.addLanguages && Array.isArray(o.addLanguages)){
-      for (const l of o.addLanguages){
-        if (!c.languages.includes(l)) c.languages.push(l);
+function drawAtlas(canvas, places, focus) {
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const [latitude, longitude] = focus?.location || [12.5, 0];
+  const span = focus ? 76 : 360;
+  const centerLat = focus ? Math.max(-58, Math.min(58, latitude)) : latitude;
+  const project = (lon, lat) => [width / 2 + (lon - longitude) * width / span, height / 2 - (lat - centerLat) * width / span];
+  const matchCodes = new Set(places.map(place => place.cca3));
+  ctx.fillStyle = "#e3f2f5";
+  ctx.fillRect(0, 0, width, height);
+  for (const feature of geography.features) {
+    const selected = matchCodes.has(countryFeatureCode(feature));
+    const { type, coordinates } = feature.geometry;
+    const polygons = type === "Polygon" ? [coordinates] : coordinates;
+    ctx.fillStyle = selected ? "#27957f" : "#bed2d8";
+    ctx.strokeStyle = "#f8fafc";
+    ctx.lineWidth = 0.8;
+    for (const rings of polygons) {
+      const firstLongitude = rings[0][0][0];
+      const offset = focus ? 360 * Math.round((longitude - firstLongitude) / 360) : 0;
+      ctx.beginPath();
+      for (const ring of rings) {
+        ring.forEach(([lon, lat], index) => {
+          const [x, y] = project(lon + offset, lat);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
       }
-      c.languages = uniq(c.languages);
-    }
-    // set explicit primaryLanguage if provided
-    if (o.primaryLanguage) c.primaryLanguage = o.primaryLanguage;
-  }
-}
-
-function toggleMenu(show){
-  const menu = document.getElementById("region-menu");
-  const btn = document.getElementById("region-btn");
-  if (show){
-    menu.hidden = false;
-    btn.setAttribute("aria-expanded","true");
-  } else {
-    menu.hidden = true;
-    btn.setAttribute("aria-expanded","false");
-  }
-}
-
-function renderRegionMenu(){
-  const menu = document.getElementById("region-menu");
-  menu.innerHTML = "";
-  allRegions().forEach(r => {
-    const item = el("div", { class: "select-item" + (r===region ? " active" : ""), role:"option" }, [
-      el("span", {}, [r]),
-      r===region ? el("span", { class:"muted" }, ["✓"]) : null
-    ]);
-    item.addEventListener("click", () => {
-      region = r;
-      document.getElementById("region-label").textContent = r;
-      renderRegionMenu();
-      render();
-      toggleMenu(false);
-    });
-    menu.appendChild(item);
-  });
-}
-
-function passesFilters(c){
-  const q = (document.getElementById("lang-search").value || "").trim().toLowerCase();
-  const regionOk = (region === "All Regions") || (c.region === region);
-  if (!regionOk) return false;
-  if (!q) return true;
-  const inName = c.name.toLowerCase().includes(q);
-  const inLang = (c.languages || []).some(l => l.toLowerCase().includes(q));
-  return inName || inLang;
-}
-
-/* ---------- Explore (countries) ---------- */
-function renderExplore(){
-  const grid = document.getElementById("countries-grid");
-  grid.innerHTML = "";
-
-  const list = COUNTRIES.filter(passesFilters)
-    .sort((a,b)=>a.name.localeCompare(b.name));
-
-  for (const c of list){
-    const pills = (c.languages || []).slice(0,4).map(l =>
-      el("span",{class:`pill2 ${pillClassFor(l)}`},[l])
-    );
-
-    grid.appendChild(
-      el("div",{class:"card country-card"},[
-        el("div",{class:"country-head"},[
-          el("img",{class:"flag-mini", src:c.flag, alt:`${c.name} flag`}),
-          el("div",{},[
-            el("div",{class:"country-title"},[c.name]),
-            el("div",{class:"country-region"},[c.region || "—"]),
-          ]),
-        ]),
-        el("div",{class:"pills-row"}, pills.length ? pills : [el("span",{class:"pill2 p-gray"},["—"])]),
-      ])
-    );
-  }
-}
-
-/* ---------- By Language ---------- */
-function computeLanguages(){
-  const map = new Map(); // lang -> {count, countries[]}
-  for (const c of COUNTRIES){
-    for (const l of (c.languages || [])){
-      if (!map.has(l)) map.set(l, { count:0, countries:[] });
-      map.get(l).count += 1;
-      map.get(l).countries.push(c);
+      ctx.fill("evenodd");
+      ctx.stroke();
     }
   }
-  const entries = [...map.entries()].map(([lang, obj]) => ({
-    lang,
-    count: obj.count,
-    countries: obj.countries,
-    cls: pillClassFor(lang),
-  }));
-  entries.sort((a,b)=> b.count - a.count || a.lang.localeCompare(b.lang));
-  return entries;
-}
-
-function renderByLanguage(){
-  const langs = computeLanguages();
-
-  document.getElementById("all-langs-title").textContent = `All Languages (${langs.length})`;
-
-  // Most spoken
-  const topWrap = document.getElementById("top-languages");
-  topWrap.innerHTML = "";
-  const top = langs.slice(0, 9);
-  for (const item of top){
-    const flags = item.countries.slice(0, 6).map(c =>
-      el("img",{src:c.flag, alt:c.name})
-    );
-    const rest = Math.max(0, item.countries.length - 6);
-
-    const card = el("div",{class:"lang-card"},[
-      el("span",{class:`pill2 ${item.cls}`},[item.lang]),
-      el("span",{class:"chev", html:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>`}),
-      el("div",{class:"lang-metric"},[String(item.count)]),
-      el("div",{class:"lang-sub"},["countries"]),
-      el("div",{class:"flag-row"},[
-        ...flags,
-        rest>0 ? el("div",{class:"flag-more"},[`+${rest}`]) : null
-      ])
-    ]);
-    // mimic highlight on click — jump to the countries view filtered by this language
-    card.addEventListener("click", ()=>{
-      document.querySelectorAll(".lang-card").forEach(n=>n.classList.remove("active"));
-      card.classList.add("active");
-      // set search to this language
-      document.getElementById("lang-search").value = item.lang;
-      // ensure quiz is exited so the lang-app is visible
-      if (quizOn) setQuiz(false);
-      // switch to the countries (Explore) view and render filtered results
-      switchView("explore");
-      render();
-      window.scrollTo({top:0, behavior:"smooth"});
-    });
-
-    topWrap.appendChild(card);
-  }
-
-  // All languages pills
-  const allWrap = document.getElementById("all-languages");
-  allWrap.innerHTML = "";
-  for (const item of langs){
-    const pill = el("div", { class: `langpill ${item.cls}` }, [`${item.lang} (${item.count})`]);
-    // apply colors by adding pill2 classes via CSS vars
-    // we mimic screenshot by tinting background based on class
-    pill.classList.remove("pill2");
-    pill.style.background = "";
-    pill.style.borderColor = "";
-    pill.style.color = "";
-    // We reuse pill2 palette by swapping class names
-    pill.classList.add("pill2");
-    pill.addEventListener("click", ()=>{
-      // ensure quiz is exited (so the lang-app is visible), set the search
-      // then switch to the countries (explore) view and render the filtered list
-      document.getElementById("lang-search").value = item.lang;
-      if (quizOn) setQuiz(false);
-      switchView("explore");
-      render();
-      window.scrollTo({top:0, behavior:"smooth"});
-    });
-    allWrap.appendChild(pill);
-  }
-}
-
-/* ---------- Quiz ---------- */
-let quiz = { correct:0, total:0, answer:null, options:[], locked:false };
-let _quizEl = null; // reference to dynamically created quiz element
-
-function createQuizElement(){
-  if (_quizEl) return _quizEl;
-  const page = document.querySelector('.page') || document.body;
-  const wrapper = document.createElement('div');
-  wrapper.id = 'quiz';
-  wrapper.className = 'quiz-screen';
-  wrapper.hidden = true;
-  wrapper.innerHTML = `
-    <div class="quiz-head">
-      <h1>Language Quiz</h1>
-      <div class="score-pill" id="score-pill">
-        <span class="icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 21h8"></path>
-            <path d="M12 17v4"></path>
-            <path d="M7 4h10v3a5 5 0 0 1-10 0V4Z"></path>
-            <path d="M5 6H4a2 2 0 0 0 0 4h2"></path>
-            <path d="M19 6h1a2 2 0 0 1 0 4h-2"></path>
-          </svg>
-        </span>
-        <span id="score-text">0 / 0</span>
-      </div>
-    </div>
-
-    <div class="quiz-card">
-      <div class="quiz-flag" id="quiz-visual"><img id="quiz-flag" alt="flag" /></div>
-      <div class="quiz-q" id="quiz-q">What language is spoken in …?</div>
-      <div class="quiz-options" id="quiz-options"></div>
-      <button class="btn btn-primary btn-wide" id="quiz-next" hidden>
-        Next Question
-        <span class="icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M5 12h14"></path>
-            <path d="M13 5l7 7-7 7"></path>
-          </svg>
-        </span>
-      </button>
-    </div>
-  `;
-  // append after lang-app if possible
-  const langApp = document.getElementById('lang-app');
-  if (langApp && langApp.parentNode) langApp.parentNode.appendChild(wrapper);
-  else page.appendChild(wrapper);
-  // wire quiz-next here
-  const nextBtn = document.getElementById('quiz-next');
-  if (nextBtn) nextBtn.addEventListener('click', ()=> buildQuizQuestion());
-  _quizEl = wrapper;
-  return _quizEl;
-}
-
-function destroyQuizElement(){
-  if (!_quizEl) return;
-  try { _quizEl.remove(); } catch(e){}
-  _quizEl = null;
-}
-
-function pickRandomCountryWithLanguage(){
-  const eligible = COUNTRIES.filter(c => (c.languages||[]).length);
-  return eligible[Math.floor(Math.random()*eligible.length)];
-}
-
-function getRandomQuestionType(){
-  const types = quizSettings.questionTypes;
-  return types[Math.floor(Math.random() * types.length)];
-}
-
-/* ---------- Quiz Question Types ---------- */
-
-// Type 1: Flag to Primary Language
-function buildFlagToLangQuestion(){
-  const c = pickRandomCountryWithLanguage();
-  const correctLang = c.primaryLanguage || c.languages[0];
-  const langs = computeLanguages().map(x=>x.lang).filter(l=>l!==correctLang);
-  
-  const opts = [correctLang];
-  while (opts.length < 4 && langs.length){
-    const pick = langs.splice(Math.floor(Math.random()*langs.length),1)[0];
-    if (!opts.includes(pick)) opts.push(pick);
-  }
-  
-  // shuffle
-  for (let i=opts.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [opts[i],opts[j]]=[opts[j],opts[i]];
-  }
-  
-  quiz.answer = correctLang;
-  quiz.options = opts.map(o => ({ text: o, value: o }));
-  
-  document.getElementById("quiz-visual").innerHTML = `<img id="quiz-flag" src="${c.flag}" alt="flag" />`;
-  document.getElementById("quiz-q").textContent = `What is the primary language spoken in ${c.name}?`;
-}
-
-// Type 2: Language to Countries
-function buildLangToCountryQuestion(){
-  const langs = computeLanguages().filter(l => l.count >= 2);
-  if (langs.length === 0) return buildFlagToLangQuestion(); // fallback
-  
-  const langItem = langs[Math.floor(Math.random() * langs.length)];
-  const correctCountries = langItem.countries.map(c => c.name);
-  const correctAnswer = correctCountries[Math.floor(Math.random() * correctCountries.length)];
-  
-  // Get wrong options from countries that don't speak this language
-  const wrongCountries = COUNTRIES
-    .filter(c => !correctCountries.includes(c.name))
-    .map(c => c.name);
-  
-  const opts = [correctAnswer];
-  while (opts.length < 4 && wrongCountries.length){
-    const pick = wrongCountries.splice(Math.floor(Math.random()*wrongCountries.length),1)[0];
-    if (!opts.includes(pick)) opts.push(pick);
-  }
-  
-  // shuffle
-  for (let i=opts.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [opts[i],opts[j]]=[opts[j],opts[i]];
-  }
-  
-  quiz.answer = correctAnswer;
-  quiz.options = opts.map(o => ({ text: o, value: o }));
-  
-  // Don't show the language name as a large label — keep the visual area empty for this question type
-  document.getElementById("quiz-visual").innerHTML = ``;
-  document.getElementById("quiz-q").textContent = `Which country speaks ${langItem.lang}?`;
-}
-
-// Type 3: How many countries speak this language?
-function buildCountryCountQuestion(){
-  const langs = computeLanguages().filter(l => l.count >= 2 && l.count <= 30);
-  if (langs.length === 0) return buildFlagToLangQuestion(); // fallback
-  
-  const langItem = langs[Math.floor(Math.random() * langs.length)];
-  const correctCount = langItem.count;
-  
-  // Generate plausible wrong answers
-  const wrongCounts = new Set();
-  wrongCounts.add(correctCount + 1);
-  wrongCounts.add(correctCount - 1);
-  wrongCounts.add(Math.floor(correctCount * 1.5));
-  wrongCounts.add(Math.floor(correctCount * 0.5));
-  wrongCounts.delete(correctCount);
-  
-  const opts = [correctCount, ...Array.from(wrongCounts)].filter(n => n > 0).slice(0, 4);
-  
-  // shuffle
-  for (let i=opts.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [opts[i],opts[j]]=[opts[j],opts[i]];
-  }
-  
-  quiz.answer = correctCount;
-  quiz.options = opts.map(o => ({ text: o.toString(), value: o }));
-  
-  // Visual area not used for count questions
-  document.getElementById("quiz-visual").innerHTML = ``;
-  document.getElementById("quiz-q").textContent = `How many countries have ${langItem.lang} as an official language?`;
-}
-
-// Type 4: Region-Language matching
-function buildRegionLangQuestion(){
-  const regions = allRegions().filter(r => r !== "All Regions");
-  if (regions.length === 0) return buildFlagToLangQuestion(); // fallback
-  
-  const region = regions[Math.floor(Math.random() * regions.length)];
-  const regionCountries = COUNTRIES.filter(c => c.region === region);
-  
-  // Get all languages from this region
-  const regionLangs = new Set();
-  regionCountries.forEach(c => {
-    (c.languages || []).forEach(l => regionLangs.add(l));
-  });
-  
-  if (regionLangs.size === 0) return buildFlagToLangQuestion(); // fallback
-  
-  const correctLang = Array.from(regionLangs)[Math.floor(Math.random() * regionLangs.size)];
-  
-  // Get languages from other regions
-  const otherLangs = computeLanguages()
-    .map(l => l.lang)
-    .filter(l => !regionLangs.has(l));
-  
-  const opts = [correctLang];
-  while (opts.length < 4 && otherLangs.length){
-    const pick = otherLangs.splice(Math.floor(Math.random()*otherLangs.length),1)[0];
-    if (!opts.includes(pick)) opts.push(pick);
-  }
-  
-  // shuffle
-  for (let i=opts.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [opts[i],opts[j]]=[opts[j],opts[i]];
-  }
-  
-  quiz.answer = correctLang;
-  quiz.options = opts.map(o => ({ text: o, value: o }));
-  
-  // Visual area not used for region-language questions
-  document.getElementById("quiz-visual").innerHTML = ``;
-  document.getElementById("quiz-q").textContent = `Which language is commonly spoken in ${region}?`;
-}
-
-function buildQuizQuestion(){
-  const questionType = getRandomQuestionType();
-  quizSettings.currentType = questionType;
-  
-  switch(questionType){
-    case 'flag-to-lang':
-      buildFlagToLangQuestion();
-      break;
-    case 'lang-to-country':
-      buildLangToCountryQuestion();
-      break;
-    case 'country-count':
-      buildCountryCountQuestion();
-      break;
-    case 'region-lang':
-      buildRegionLangQuestion();
-      break;
-    default:
-      buildFlagToLangQuestion();
-  }
-  
-  quiz.locked = false;
-  document.getElementById("quiz-next").hidden = true;
-
-  const wrap = document.getElementById("quiz-options");
-  wrap.innerHTML = "";
-  for (const opt of quiz.options){
-    const btn = el("button", { class:"qopt", type:"button" }, [
-      el("span",{},[opt.text]),
-      el("span",{class:"qicon", html:""})
-    ]);
-    btn.addEventListener("click", ()=> chooseOption(btn, opt.value));
-    wrap.appendChild(btn);
-  }
-  updateScore();
-}
-
-function svgCheck(){
-  return `<svg class="qicon good" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
-}
-function svgX(){
-  return `<svg class="qicon bad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>`;
-}
-
-function chooseOption(btn, chosen){
-  if (quiz.locked) return;
-  quiz.locked = true;
-  quiz.total += 1;
-
-  const correct = chosen === quiz.answer || chosen.toString() === quiz.answer.toString();
-  if (correct) quiz.correct += 1;
-
-  const wrap = document.getElementById("quiz-options");
-  const buttons = [...wrap.querySelectorAll("button.qopt")];
-  for (const b of buttons){
-    const text = b.querySelector("span").textContent;
-    b.disabled = true;
-    const icon = b.querySelector(".qicon");
-    if (text === quiz.answer.toString()){
-      b.classList.add("good");
-      icon.innerHTML = svgCheck();
-    } else if (text === chosen.toString() && !correct){
-      b.classList.add("bad");
-      icon.innerHTML = svgX();
-    } else {
-      b.disabled = true;
+  for (const place of places) {
+    if (!place.location) continue;
+    const [lat, rawLon] = place.location;
+    const lon = rawLon + 360 * Math.round((longitude - rawLon) / 360);
+    const [x, y] = project(lon, lat);
+    ctx.beginPath();
+    ctx.arc(x, y, focus ? 7 : 3.3, 0, 2 * Math.PI);
+    ctx.fillStyle = "#116659";
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = focus ? 2.4 : 1;
+    ctx.stroke();
+    if (focus) {
+      ctx.font = "bold 24px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 5;
+      ctx.lineJoin = "round";
+      ctx.strokeText(place.name, x, y - 15);
+      ctx.fillText(place.name, x, y - 15);
     }
   }
-
-  document.getElementById("quiz-next").hidden = false;
-  updateScore();
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", focus
+    ? `Map showing ${focus.name} in ${focus.location[2]}`
+    : "World map with matching places highlighted");
 }
 
-function updateScore(){
-  document.getElementById("score-text").textContent = `${quiz.correct} / ${quiz.total}`;
+function findLanguage(language) {
+  selectedLanguage = language;
+  langElement("place-search").value = "";
+  langElement("region-select").value = "";
+  switchView("place");
+  langElement("place-search").focus();
 }
 
-/* ---------- View state ---------- */
-function switchView(v){
-  VIEW = v;
-  const tabBy = document.getElementById("tab-by-language");
-  if (tabBy) tabBy.classList.toggle("active", v==="by-language");
-  document.getElementById("view-explore").hidden = (v!=="explore");
-  document.getElementById("view-by-language").hidden = (v!=="by-language");
-  render();
-}
-
-function setQuiz(on){
-  quizOn = on;
-  document.getElementById("lang-app").hidden = on;
-  if (on){
-    createQuizElement();
-    document.getElementById("quiz").hidden = false;
-  } else {
-    // hide and remove element to keep DOM clean
-    const q = document.getElementById('quiz');
-    if (q) q.hidden = true;
-    destroyQuizElement();
+function renderLanguages() {
+  const term = langElement("language-search").value.trim().toLowerCase();
+  const matching = languageIndex.filter(([language]) => language.toLowerCase().includes(term));
+  const list = langElement("language-list");
+  list.replaceChildren();
+  for (const [language, places] of matching.slice(0, term ? matching.length : 18)) {
+    const card = node("button", "lang-card atlas-language-card");
+    card.type = "button";
+    card.append(node("strong", "", language), node("span", "muted", `${places.length} ${places.length === 1 ? "place" : "places"} →`));
+    card.onclick = () => findLanguage(language);
+    list.append(card);
   }
+  if (!matching.length) list.append(node("p", "muted", "No languages matched your search."));
+  langElement("language-list-title").textContent = term ? `${matching.length} matching languages` : "Languages listed in the most places";
+}
 
-  const toggle = document.getElementById("quiz-toggle");
-  const tabQuiz = document.getElementById("tab-quiz");
-  if (on){
-    toggle.classList.add("active-purple");
-    toggle.innerHTML = `
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6 6 18"></path><path d="M6 6l12 12"></path>
-        </svg>
-      </span>
-      Exit Quiz
-    `;
-    buildQuizQuestion();
-    if (tabQuiz) tabQuiz.classList.add("active");
-  } else {
-    toggle.classList.remove("active-purple");
-    toggle.innerHTML = `
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19a2 2 0 0 0 2 2h12"></path>
-          <path d="M6 2h12a2 2 0 0 1 2 2v16"></path>
-          <path d="M6 2a2 2 0 0 0-2 2v16"></path>
-          <path d="M8 6h8"></path>
-          <path d="M8 10h8"></path>
-          <path d="M8 14h5"></path>
-        </svg>
-      </span>
-      Quiz Mode
-    `;
-    if (tabQuiz) tabQuiz.classList.remove("active");
+function createPlaceCard(place) {
+  const card = node("article", "card country-card");
+  const head = node("div", "country-head");
+  if (place.flag) {
+    const flag = node("img", "flag-mini");
+    flag.alt = "";
+    flag.src = place.flag;
+    flag.loading = "lazy";
+    flag.onerror = () => flag.remove();
+    head.append(flag);
+  }
+  const location = node("div");
+  location.append(
+    node("h3", "country-title", place.name),
+    node("p", "country-region", place.location?.[2] || place.region)
+  );
+  head.append(location);
+  const languages = node("div", "pills-row");
+  for (const language of place.languages) {
+    const pill = node("button", "pill2 p-gray", language);
+    pill.type = "button";
+    pill.onclick = () => findLanguage(language);
+    languages.append(pill);
+  }
+  if (!place.languages.length) languages.append(node("span", "muted", "No languages listed"));
+  card.append(head, languages);
+  const fact = officialFacts.find(item => item.code === place.cca3);
+  if (fact) {
+    const detail = node("details", "language-fact");
+    const link = node("a", "text-link", "Read the source");
+    link.href = fact.source;
+    detail.append(node("summary", "", "Language status"), node("p", "", fact.explanation), link);
+    card.append(detail);
+  }
+  return card;
+}
+
+function renderPlaces() {
+  const term = langElement("place-search").value.trim().toLowerCase();
+  const region = langElement("region-select").value;
+  const matching = countries.filter(place =>
+    (!region || place.region === region) && (!selectedLanguage || place.languages.includes(selectedLanguage)) &&
+    (!term || place.name.toLowerCase().includes(term) || place.languages.some(language => language.toLowerCase().includes(term)))
+  );
+  const grid = langElement("countries-grid");
+  grid.replaceChildren();
+  langElement("language-selection").hidden = !selectedLanguage;
+  langElement("selected-language").textContent = selectedLanguage;
+  langElement("place-count").textContent = `${matching.length} ${matching.length === 1 ? "place" : "places"}`;
+  const canvas = langElement("language-map");
+  canvas.hidden = !geography || matching.length === 0 || (!term && !region && !selectedLanguage);
+  if (!canvas.hidden) drawAtlas(canvas, matching);
+  const regions = [...new Set(matching.map(place => place.region))].sort();
+  for (const label of regions) {
+    const section = node("section", "language-region");
+    const cards = node("div", "cards-grid");
+    for (const place of matching.filter(place => place.region === label)) cards.append(createPlaceCard(place));
+    section.append(node("h2", "", label), cards);
+    grid.append(section);
   }
 }
 
-function render(){
-  // region menu maybe hidden when switching
-  if (!quizOn){
-    if (VIEW === "explore") renderExplore();
-    else renderByLanguage();
-  }
+function switchView(nextView) {
+  view = nextView;
+  const showLanguage = view === "language";
+  langElement("view-by-language").hidden = !showLanguage;
+  langElement("view-by-place").hidden = showLanguage;
+  langElement("by-language").setAttribute("aria-pressed", showLanguage);
+  langElement("by-place").setAttribute("aria-pressed", !showLanguage);
+  if (showLanguage) renderLanguages();
+  else renderPlaces();
 }
 
-async function init(){
-  await loadCountries();
+function updateQuizScore() {
+  langElement("quiz-progress").textContent = `Question ${Math.min(quizEntries.length + 1, quizQueue.length)} of ${quizQueue.length}`;
+  langElement("quiz-score").textContent = quizEntries.filter(entry => entry.outcome === "correct").length;
+}
 
-  // tabs (if present) — prefer topbar Quiz toggle for entering quiz mode
-  const tabQuizEl = document.getElementById("tab-quiz");
-  if (tabQuizEl) tabQuizEl.addEventListener("click", ()=> setQuiz(!quizOn));
-  const tabByEl = document.getElementById("tab-by-language");
-  if (tabByEl) tabByEl.addEventListener("click", ()=>switchView("by-language"));
-
-  // search
-  document.getElementById("lang-search").addEventListener("input", ()=>render());
-
-  // region dropdown
-  renderRegionMenu();
-  document.getElementById("region-btn").addEventListener("click", (e)=>{
-    e.preventDefault();
-    const menu = document.getElementById("region-menu");
-    toggleMenu(menu.hidden);
+function buildQuestions() {
+  const facts = officialFacts.flatMap(fact => {
+    const place = countries.find(country => country.cca3 === fact.code && country.location);
+    if (!place) return [];
+    const language = { ...fact, place, id: `${fact.code}-language`, label: `${place.name} · Language status` };
+    const zone = place.location[2];
+    const distractors = shuffle([...new Set(countries.map(country => country.location?.[2])
+      .filter(region => region && region !== zone))]).slice(0, 3);
+    const region = {
+      ...fact, place, id: `${fact.code}-location`, label: `${place.name} · Map location`,
+      prompt: `In which part of the world is ${place.name}?`, answers: [zone, ...distractors],
+    };
+    return [language, region];
   });
-  document.addEventListener("click", (e)=>{
-    const wrap = document.querySelector(".select-wrap");
-    if (!wrap.contains(e.target)) toggleMenu(false);
-  });
-
-  // quiz
-  document.getElementById("quiz-toggle").addEventListener("click", ()=> setQuiz(!quizOn));
-
-  // default view
-  switchView("by-language");
-  render();
+  return facts;
 }
 
-document.addEventListener("DOMContentLoaded", init);
+let questions;
+
+function showQuestion() {
+  question = quizQueue[quizEntries.length];
+  langElement("quiz-answer").hidden = true;
+  langElement("quiz-next").hidden = true;
+  langElement("finish-language").disabled = !quizEntries.length;
+  const title = langElement("quiz-question");
+  title.textContent = question.prompt;
+  const options = langElement("quiz-options");
+  options.replaceChildren();
+  for (const answer of shuffle(question.answers)) {
+    const button = node("button", "option", answer);
+    button.type = "button";
+    button.onclick = () => chooseAnswer(button, answer);
+    options.append(button);
+  }
+  updateQuizScore();
+  title.focus();
+}
+
+function chooseAnswer(chosen, answer) {
+  const correctAnswer = question.answers[0];
+  const correct = answer === correctAnswer;
+  quizEntries.push({ id: question.id, label: question.label, outcome: correct ? "correct" : "missed" });
+  for (const button of langElement("quiz-options").children) {
+    button.disabled = true;
+    if (button.textContent === correctAnswer) {
+      button.classList.add("correct");
+      button.textContent += " ✓";
+    } else if (button === chosen) {
+      button.classList.add("wrong");
+      button.textContent += " ✕";
+    }
+  }
+  const country = question.place;
+  langElement("quiz-feedback").textContent = `${correct ? "Correct." : `Answer · ${correctAnswer}.`} ${country.name} is in ${country.location[2]}. ${question.explanation}`;
+  langElement("quiz-source").href = question.source;
+  langElement("quiz-map").hidden = !geography;
+  if (geography) drawAtlas(langElement("quiz-map"), [country], country);
+  langElement("quiz-answer").hidden = false;
+  const next = langElement("quiz-next");
+  next.textContent = quizEntries.length === quizQueue.length ? "See results" : "Next question";
+  next.hidden = false;
+  langElement("finish-language").disabled = false;
+  langElement("quiz-score").textContent = quizEntries.filter(entry => entry.outcome === "correct").length;
+  next.focus();
+}
+
+function startQuiz(ids) {
+  quizQueue = ids ? ids.map(id => questions.find(item => item.id === id)) : shuffle(questions).slice(0, 10);
+  quizEntries = [];
+  showQuestion();
+}
+
+function setQuiz(open) {
+  quizOpen = open;
+  langElement("lang-app").hidden = open;
+  langElement("language-round").hidden = !open;
+  langElement("round-results").hidden = true;
+  langElement("quiz-toggle").textContent = open ? "Back to explorer" : "Start language quiz";
+  if (open) startQuiz();
+}
+
+function finishQuiz() {
+  showRoundResults(langElement("language-round"), quizEntries, startQuiz, startQuiz);
+}
+
+async function init() {
+  const atlasData = getJSON("/api/languages_remote").catch(() => getJSON("/api/countries"));
+  const [data, locations, geo, facts, overrides] = await Promise.all([
+    atlasData, getJSON("/static/data/country_locations.json"),
+    getJSON("/static/data/countries_geojson.json").catch(() => null),
+    getJSON("/static/data/language_facts.json").catch(() => []),
+    getJSON("/static/data/language_overrides.json").catch(() => ({})),
+  ]);
+  geography = geo;
+  officialFacts = facts;
+  countries = data.countries.map(raw => ({
+    ...raw,
+    name: typeof raw.name === "string" ? raw.name : raw.name.common,
+    region: raw.region || "Region unavailable",
+    location: locations.locations[raw.cca3],
+    languages: [...new Set([...languageNames(raw), ...(overrides[raw.name]?.addLanguages || [])])].sort(),
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  const index = new Map();
+  for (const place of countries) {
+    for (const language of place.languages) {
+      if (!index.has(language)) index.set(language, []);
+      index.get(language).push(place);
+    }
+  }
+  languageIndex = [...index].sort(([a, aPlaces], [b, bPlaces]) => bPlaces.length - aPlaces.length || a.localeCompare(b));
+  questions = buildQuestions();
+
+  const select = langElement("region-select");
+  select.add(new Option("All regions", ""));
+  for (const region of [...new Set(countries.map(place => place.region))].sort()) select.add(new Option(region, region));
+  langElement("by-language").onclick = () => switchView("language");
+  langElement("by-place").onclick = () => switchView("place");
+  langElement("language-search").oninput = renderLanguages;
+  langElement("place-search").oninput = renderPlaces;
+  select.onchange = renderPlaces;
+  langElement("clear-language").onclick = () => {
+    selectedLanguage = "";
+    renderPlaces();
+    langElement("place-search").focus();
+  };
+  langElement("quiz-toggle").disabled = questions.length === 0;
+  langElement("quiz-toggle").onclick = () => setQuiz(!quizOpen);
+  langElement("finish-language").onclick = finishQuiz;
+  langElement("quiz-next").onclick = () => quizEntries.length === quizQueue.length ? finishQuiz() : showQuestion();
+  langElement("language-loading").hidden = true;
+  switchView(view);
+}
+
+init().catch(error => {
+  console.error(error);
+  langElement("language-loading").textContent = "Language data could not load. Refresh the page to try again.";
+});
