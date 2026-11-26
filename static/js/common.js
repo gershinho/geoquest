@@ -8,7 +8,10 @@ const STATS_KEY = "geoquest_stats";
 
 function todayISO() {
   const d = new Date();
-  return d.toISOString().slice(0,10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function loadStats() {
@@ -35,11 +38,7 @@ function bumpStreak(s) {
   }
   if (s.lastPlayDate === t) return;
 
-  const prev = new Date(s.lastPlayDate + "T00:00:00");
-  const cur = new Date(t + "T00:00:00");
-  const diffDays = Math.round((cur - prev) / (1000*60*60*24));
-
-  if (diffDays === 1) s.streak = (s.streak || 0) + 1;
+  if (datePlusDays(s.lastPlayDate, 1) === t) s.streak = (s.streak || 0) + 1;
   else s.streak = 1;
 
   s.lastPlayDate = t;
@@ -48,7 +47,7 @@ function bumpStreak(s) {
 function accuracyPct(s) {
   const total = (s.flagsTotal || 0) + (s.mapTotal || 0);
   const correct = (s.flagsCorrect || 0) + (s.mapCorrect || 0);
-  if (total <= 0) return 100;
+  if (total <= 0) return null;
   return Math.round((correct/total) * 100);
 }
 
@@ -60,4 +59,89 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+const RECALL_INTERVALS = [1, 3, 7, 14, 30];
+
+function recordRecall(stats, skill, country, outcome) {
+  const history = (stats.recall ||= { flags: {}, map: {} })[skill];
+  const entry = history[country.cca3] ||= { days: 0 };
+  const today = todayISO();
+  if (outcome === "recognized") {
+    entry.due ||= today;
+    return;
+  }
+  if (outcome === "recalled") {
+    if (entry.lastRecall === today) return;
+    entry.days = Math.min(entry.days + 1, RECALL_INTERVALS.length);
+    entry.lastRecall = today;
+  } else {
+    entry.days = 0;
+  }
+  entry.due = datePlusDays(today, RECALL_INTERVALS[Math.max(0, entry.days - 1)]);
+}
+
+function datePlusDays(iso, days) {
+  const date = new Date(iso + "T12:00:00Z");
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function dueCountries(stats, skill) {
+  const today = todayISO();
+  return Object.entries(stats.recall?.[skill] || {})
+    .filter(([, entry]) => entry.due <= today)
+    .sort(([, a], [, b]) => a.due.localeCompare(b.due) || a.days - b.days)
+    .map(([code]) => code);
+}
+
+function showRoundResults(play, entries, restart, retry) {
+  const results = document.getElementById("round-results");
+  const firstTry = entries.filter(entry => entry.outcome === "correct").length;
+  const assisted = entries.filter(entry => entry.outcome === "assisted").length;
+  const missed = entries.filter(entry => entry.outcome === "missed").length;
+  const review = [...new Map(entries.filter(entry => entry.outcome !== "correct")
+    .map(entry => [entry.id, entry])).values()];
+
+  document.getElementById("results-score").textContent = entries.length
+    ? `${firstTry + assisted} of ${entries.length} correct`
+    : "No completed questions this round";
+  const metrics = document.getElementById("results-metrics");
+  metrics.replaceChildren();
+  for (const [count, label] of [[firstTry, "First try"], [assisted, "With help"], [missed, "Missed"]]) {
+    const tile = document.createElement("div");
+    const value = document.createElement("strong");
+    value.textContent = count;
+    tile.append(value, label);
+    metrics.append(tile);
+  }
+
+  const list = document.getElementById("results-review");
+  list.replaceChildren();
+  for (const entry of review) {
+    const item = document.createElement("li");
+    item.textContent = `${entry.label} · ${entry.outcome === "assisted" ? "With help" : "Missed"}`;
+    list.append(item);
+  }
+  list.hidden = document.getElementById("results-review-title").hidden = review.length === 0;
+  const retryButton = document.getElementById("results-retry");
+  retryButton.hidden = review.length === 0;
+  retryButton.textContent = assisted ? "Retry practice questions" : "Retry missed questions";
+
+  const resume = (start) => {
+    results.hidden = true;
+    play.hidden = false;
+    start();
+  };
+  retryButton.onclick = () => resume(() => retry(review.map(entry => entry.id)));
+  document.getElementById("results-restart").onclick = () => resume(restart);
+  play.hidden = true;
+  results.hidden = false;
+  document.getElementById("results-title").focus();
+}
+
+function countryFeatureCode(feature) {
+  const { iso_a3: code, name } = feature.properties;
+  if (code !== "-99") return code;
+  return { France: "FRA", Norway: "NOR", Kosovo: "UNK" }[name];
 }

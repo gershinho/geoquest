@@ -1,0 +1,51 @@
+[
+  {
+    "code": "BRA",
+    "prompt": "Which language does Brazil’s constitution name as official?",
+    "answers": ["Portuguese", "Spanish", "English", "French"],
+    "explanation": "Portuguese is Brazil’s official language under Article 13 of its constitution.",
+    "source": "https://www4.planalto.gov.br/legislacao/portal-legis/legislacao-1/constituicao"
+  },
+  {
+    "code": "CAN",
+    "prompt": "Which two languages are official at the federal level in Canada?",
+    "answers": ["English and French", "English and Spanish", "French and Inuktitut", "English and Inuktitut"],
+    "explanation": "English and French have equal status in Canada’s federal institutions under the Canadian Charter of Rights and Freedoms.",
+    "source": "https://library-biblio.parl.ca/sites/PublicWebsite/default/en_CA/ResearchPublications/201155E"
+  },
+  {
+    "code": "IRL",
+    "prompt": "Which language does Ireland’s constitution name as the first official language?",
+    "answers": ["Irish", "English", "Welsh", "Scottish Gaelic"],
+    "explanation": "Article 8 names Irish as the first official language and English as a second official language.",
+    "source": "https://www.gov.ie/en/department-of-the-taoiseach/publications/constitution-of-ireland/"
+  },
+  {
+    "code": "SGP",
+    "prompt": "Which of these languages is official in Singapore?",
+    "answers": ["Tamil", "Thai", "Vietnamese", "Burmese"],
+    "explanation": "Singapore’s constitution lists Malay, Mandarin, Tamil and English as official languages. Malay is also the national language.",
+    "source": "https://sso.agc.gov.sg/Act/CONS1963?ProvIds=pr153A-&WiAl=1"
+  },
+  {
+    "code": "ZAF",
+    "prompt": "Which of these is one of South Africa’s official languages?",
+    "answers": ["South African Sign Language", "Swahili", "Portuguese", "French"],
+    "explanation": "South African Sign Language is one of South Africa’s 12 official languages, alongside languages including isiZulu, isiXhosa, Afrikaans and English.",
+    "source": "https://www.gov.za/about-sa/south-africas-people"
+  },
+  {
+    "code": "CHE",
+    "prompt": "Which Swiss national language has official federal status specifically when authorities communicate with its speakers?",
+    "answers": ["Romansh", "Italian", "French", "German"],
+    "explanation": "German, French and Italian are official languages of the Swiss Confederation. Romansh has official status when federal authorities communicate with Romansh speakers.",
+    "source": "https://www.fedlex.admin.ch/eli/cc/1999/404/en"
+  },
+  {
+    "code": "MEX",
+    "prompt": "Which languages does Mexico recognize as national languages under its linguistic rights law?",
+    "answers": ["Spanish and recognized Indigenous languages", "Spanish and Portuguese", "Spanish and English", "Spanish and French"],
+    "explanation": "Mexico’s linguistic rights law recognizes Spanish and the Indigenous languages it covers as national languages.",
+    "source": "https://portalhcd.diputados.gob.mx/LeyesBiblio/pdf/257_200618.pdf"
+  }
+]

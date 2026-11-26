@@ -58,6 +58,7 @@
         <div class="stat-meta">
           <div class="stat-label">Flags Mastered</div>
           <div class="stat-value" id="stat-flags">0</div>
+          <a class="review-link" id="review-flags" href="/flags/play?review=1" hidden></a>
         </div>
       </div>
 
@@ -66,8 +67,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
         </div>
         <div class="stat-meta">
-          <div class="stat-label">Countries Located</div>
+          <div class="stat-label">Locations Mastered</div>
           <div class="stat-value" id="stat-located">0</div>
+          <a class="review-link" id="review-map" href="/map/play?review=1" hidden></a>
         </div>
       </div>
 
@@ -87,10 +89,12 @@
         </div>
         <div class="stat-meta">
           <div class="stat-label">Accuracy</div>
-          <div class="stat-value" id="stat-acc">100%</div>
+          <div class="stat-value" id="stat-acc">—</div>
         </div>
       </div>
     </div>
+
+    <p class="recall-note">Master a flag by typing its country correctly on two different days. Master a location by finding it on the first try on two different days.</p>
 
     <section class="section">
       <h2 class="section-title">Choose Your Challenge</h2>
@@ -130,7 +134,7 @@
           </div>
           <div class="cc-body">
             <div class="cc-title">Language Explorer</div>
-            <div class="cc-sub">See what languages are spoken in each country (and quiz yourself).</div>
+            <div class="cc-sub">Explore where languages are listed and quiz yourself on language geography.</div>
           </div>
           <div class="cc-arrow">›</div>
         </a>

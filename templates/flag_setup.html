@@ -20,7 +20,7 @@
       <p class="modal-sub">Test your knowledge of world flags</p>
 
       <div class="field">
-        <label>Select Difficulty</label>
+        <label for="difficulty">Select difficulty</label>
         <select id="difficulty" class="select">
           <option value="easy" selected>Easy</option>
           <option value="medium">Medium </option>
@@ -29,12 +29,20 @@
       </div>
 
       <div class="field">
-        <label>Number of Questions</label>
+        <label for="total">Number of questions</label>
         <select id="total" class="select">
           <option value="10" selected>10</option>
           <option value="20">20</option>
           <option value="50">50</option>
           <option value="unlimited">Unlimited</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="flag-style">Answer style</label>
+        <select id="flag-style" class="select">
+          <option value="mc">Multiple choice</option>
+          <option value="type">Type answer</option>
         </select>
       </div>
 

@@ -1,100 +1,69 @@
 {% extends "base.html" %}
 {% set title="Language Explorer" %}
 {% block content %}
-<div class="page">
-  <div class="topbar">
-    <a class="topbar-home" href="/">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z"/>
-        </svg>
-      </span>
-      Home
-    </a>
+<main class="page language-page">
+  <header class="round-nav">
+    <a class="topbar-home" href="/">‹ Home</a>
+    <button class="btn btn-primary" id="quiz-toggle" type="button" disabled>Start language quiz</button>
+  </header>
 
-    <div class="topbar-center">
-      <span class="badge-icon i-purple">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10 14c2-4 6-6 10-6"></path>
-          <path d="M10 6c2 4 6 6 10 6"></path>
-          <path d="M16 12c1.5 2 3 3 4 3"></path>
-          <path d="M16 12c1.5-2 3-3 4-3"></path>
-          <path d="M4 6v12"></path>
-          <path d="M7 6v12"></path>
-        </svg>
-      </span>
-      <span class="topbar-title">Language Explorer</span>
+  <div id="lang-app">
+    <h1>Language Explorer</h1>
+    <p class="muted">See where languages are listed across countries and territories. <a class="text-link" href="https://restcountries.com/">Country data source</a></p>
+    <div class="language-tabs" aria-label="Browse languages">
+      <button class="btn btn-outline" id="by-language" aria-pressed="true" type="button">By language</button>
+      <button class="btn btn-outline" id="by-place" aria-pressed="false" type="button">By place</button>
     </div>
+    <p id="language-loading" role="status">Loading language data…</p>
 
-    <button class="btn btn-ghost" id="quiz-toggle">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 19a2 2 0 0 0 2 2h12"></path>
-          <path d="M6 2h12a2 2 0 0 1 2 2v16"></path>
-          <path d="M6 2a2 2 0 0 0-2 2v16"></path>
-          <path d="M8 6h8"></path>
-          <path d="M8 10h8"></path>
-          <path d="M8 14h5"></path>
-        </svg>
-      </span>
-      Quiz Mode
-    </button>
-  </div>
+    <section id="view-by-language" hidden>
+      <label class="language-filter">Find a language
+        <input id="language-search" class="select" type="search" placeholder="e.g. Portuguese">
+      </label>
+      <h2 id="language-list-title">Languages by geographic coverage</h2>
+      <div class="langcards-grid" id="language-list"></div>
+    </section>
 
-  <!-- Main Explorer -->
-  <div id="lang-app" class="lang-app">
-    <!-- Tabs removed: default view shows most spoken languages; use top-right Quiz Mode button to enter quiz -->
-
-    <!-- lang-controls moved into Explore view so By Language shows only top languages -->
-
-  <!-- Explore view (hidden by default; we show By Language on entry) -->
-  <div id="view-explore" hidden>
-      <div class="lang-controls">
-        <div class="input input-lg">
-          <span class="icon muted">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="7"></circle>
-              <path d="M20 20l-3.5-3.5"></path>
-            </svg>
-          </span>
-          <input id="lang-search" placeholder="Search countries or languages..." />
-        </div>
-
-        <div class="select-wrap">
-          <button class="select-btn input-lg" id="region-btn" aria-haspopup="listbox" aria-expanded="false">
-            <span class="icon muted">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 6h16"></path>
-                <path d="M7 12h10"></path>
-                <path d="M10 18h4"></path>
-              </svg>
-            </span>
-            <span id="region-label">All Regions</span>
-            <span class="icon muted">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 9l6 6 6-6"></path>
-              </svg>
-            </span>
-          </button>
-          <div class="select-menu" id="region-menu" role="listbox" tabindex="-1" hidden></div>
-        </div>
+    <section id="view-by-place" hidden>
+      <div class="language-filters">
+        <label class="language-filter">Find a place or language
+          <input id="place-search" class="select" type="search" placeholder="e.g. Brazil">
+        </label>
+        <label class="language-filter">Region
+          <select id="region-select" class="select"></select>
+        </label>
       </div>
-
-      <div class="cards-grid" id="countries-grid"></div>
-    </div>
-
-  <!-- By Language view (visible by default) -->
-  <div id="view-by-language">
-      <h2 class="section-title">Most Spoken Languages</h2>
-      <div class="langcards-grid" id="top-languages"></div>
-
-      <h2 class="section-title" id="all-langs-title">All Languages</h2>
-      <div class="langpill-wrap" id="all-languages"></div>
-    </div>
+      <div id="language-selection" class="language-selection" hidden>
+        <p id="selected-language"></p>
+        <button class="btn btn-outline" type="button" id="clear-language">Clear language</button>
+      </div>
+      <p id="place-count" class="muted" role="status"></p>
+      <canvas class="atlas-map" id="language-map" width="900" height="360" hidden></canvas>
+      <div id="countries-grid"></div>
+    </section>
   </div>
 
-  <!-- Quiz element is created dynamically by JS when entering Quiz Mode -->
-</div>
+  <div id="language-round" hidden>
+    <section class="game-card language-quiz" aria-label="Language quiz">
+      <div class="language-quiz-meta">
+        <span id="quiz-progress"></span>
+        <span>Score <strong id="quiz-score">0</strong></span>
+      </div>
+      <h1 id="quiz-question" tabindex="-1"></h1>
+      <div id="quiz-options" class="options-grid"></div>
+      <div class="language-answer" id="quiz-answer" hidden>
+        <p id="quiz-feedback" role="status"></p>
+        <canvas class="atlas-map" id="quiz-map" width="900" height="390"></canvas>
+        <a class="text-link" id="quiz-source">Read the source</a>
+      </div>
+      <div class="results-actions">
+        <button class="btn btn-ghost" id="finish-language" type="button" disabled>Finish round</button>
+        <button class="btn btn-primary" id="quiz-next" type="button" hidden>Next question</button>
+      </div>
+    </section>
+  </div>
+  {% include "round_results.html" %}
+</main>
 {% endblock %}
 
 {% block scripts %}
