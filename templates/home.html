@@ -1,5 +1,16 @@
 {% extends "base.html" %}
 {% set title="GeoQuest" %}
+{% set avatars = [
+  ("nia", "Nia", "Unfolds a trail map"),
+  ("teo", "Téo", "Raises a camera and takes a photo"),
+  ("sedge", "Sedge", "Stows a rock sample"),
+  ("vela", "Vela", "Unfurls a paper streamer"),
+  ("lumen", "Lumen", "Raises a lantern and spreads their wings"),
+  ("slate", "Slate", "Stomps and sends pebbles hopping")
+] %}
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/avatars.css') }}">
+{% endblock %}
 {% block content %}
   <div class="page hero-page">
     <div class="hero">
@@ -38,17 +49,40 @@
         </div>
       </div>
 
-      <div class="hero-right">
-        <div class="globe">
-          <div class="globe-inner">
-            <div class="globe-grid"></div>
-            <div class="globe-stars"></div>
-          </div>
+      <div class="hero-avatar" id="hero-avatar" data-motion="paused">
+        <div class="avatar-stage" data-avatar="nia" aria-hidden="true">
+          <span class="avatar-route"></span>
+          <span class="avatar-shadow"></span>
+          <span class="avatar-sprite" id="selected-avatar"></span>
+          <span class="avatar-effect"></span>
         </div>
-        <div class="globe-ring ring-1"></div>
-        <div class="globe-ring ring-2"></div>
+        <div class="avatar-actions">
+          <button class="btn btn-outline btn-sm" id="change-avatar" type="button" aria-haspopup="dialog">
+            Change avatar
+          </button>
+          <button class="btn btn-outline avatar-motion" id="avatar-motion" type="button" aria-label="Play avatar animation" title="Play avatar animation">
+            <span aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </div>
+
+    <dialog class="avatar-picker" id="avatar-picker" aria-labelledby="avatar-picker-title">
+      <div class="avatar-picker-heading">
+        <h2 id="avatar-picker-title">Choose your avatar</h2>
+        <form method="dialog">
+          <button class="btn btn-outline btn-sm" aria-label="Close avatar picker">×</button>
+        </form>
+      </div>
+      <div class="avatar-options">
+        {% for id, name, action in avatars %}
+        <button class="avatar-option" type="button" data-avatar="{{ id }}" aria-label="{{ name }}. {{ action }}." aria-pressed="{{ 'true' if loop.first else 'false' }}">
+          <span class="avatar-sprite" aria-hidden="true"></span>
+          <span data-avatar-name>{{ name }}</span>
+        </button>
+        {% endfor %}
+      </div>
+    </dialog>
 
     <div class="stats">
       <div class="stat-card">
@@ -145,4 +179,5 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/home.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/avatars.js') }}"></script>
 {% endblock %}
