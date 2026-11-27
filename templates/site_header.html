@@ -1,0 +1,11 @@
+<header class="site-header">
+  <nav class="site-nav site-frame" aria-label="GeoQuest">
+    <a class="site-brand" href="{{ url_for('home') }}" aria-label="GeoQuest home"><span class="site-compass" aria-hidden="true"></span>GeoQuest</a>
+    <div class="site-nav-links">
+      <a class="site-home-link" href="{{ url_for('home') }}"{% if request.endpoint == "home" %} aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('flags_setup') }}"{% if request.endpoint in ("flags_setup", "flags_play") %} aria-current="true"{% endif %}>Flags</a>
+      <a href="{{ url_for('map_setup') }}"{% if request.endpoint in ("map_setup", "map_play") %} aria-current="true"{% endif %}>Map</a>
+      <a href="{{ url_for('languages') }}"{% if request.endpoint == "languages" %} aria-current="page"{% endif %}>Languages</a>
+    </div>
+  </nav>
+</header>

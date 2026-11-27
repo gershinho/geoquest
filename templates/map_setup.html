@@ -1,26 +1,16 @@
 {% extends "base.html" %}
 {% set title="Map Challenge" %}
 {% block content %}
-  <div class="page center-page">
-    <div class="topbar">
-      <a class="topbar-home" href="/">
-        <span class="icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z"/></svg>
-        </span>
-        Home
-      </a>
-      <div class="topbar-right"></div>
-    </div>
-
+  <main class="page center-page">
     <div class="modal-card">
       <div class="modal-icon i-blue">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10Z"></path><circle cx="12" cy="11" r="2"></circle></svg>
       </div>
-      <h2 class="modal-title">Map Challenge</h2>
+      <h1 class="modal-title">Map Challenge</h1>
       <p class="modal-sub">Click on the map to locate countries</p>
 
       <div class="field">
-        <label>Select Region</label>
+        <label for="region">Select region</label>
         <select id="region" class="select">
           <option value="All" selected>All Countries</option>
           <option value="Africa">Africa</option>
@@ -32,7 +22,7 @@
       </div>
 
       <div class="field">
-        <label>Attempts per country</label>
+        <label for="attempts">Attempts per country</label>
         <select id="attempts" class="select">
           <option value="1">1</option>
           <option value="2">2</option>
@@ -48,7 +38,7 @@
 
       <a class="back-link" href="/">← Back to Home</a>
     </div>
-  </div>
+  </main>
 {% endblock %}
 
 {% block scripts %}
