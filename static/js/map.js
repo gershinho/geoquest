@@ -21,10 +21,8 @@ const roundLength = Number(sessionStorage.getItem("geoquest_map_total")) || 10;
 const maxAttempts = Math.min(5, Math.max(1, Number(sessionStorage.getItem("geoquest_map_attempts")) || 3));
 const countries = new Map();
 const outlines = new Map();
-const dots = new Map();
 let map, world, guessLayer, revealLayer;
 let queue, target, entries, guesses, attempts, locked;
-let smallCountries = [];
 
 function referencePoint(country) {
   const [lat, lng] = country.location;
@@ -64,62 +62,6 @@ function updateStyles() {
   for (const [code, layers] of outlines) {
     for (const layer of layers) layer.setStyle(countryStyles[styleFor(code)]);
   }
-  for (const [code, marker] of dots) {
-    marker.getElement()?.setAttribute("data-outcome", styleFor(code));
-  }
-}
-
-function refreshDots() {
-  smallCountries = [];
-  const view = map.getBounds().pad(0.12);
-  for (const country of countries.values()) {
-    if (!eligible(country)) continue;
-    const code = country.cca3;
-    const point = referencePoint(country);
-    const footprint = outlines.get(code)?.[0].feature.properties.footprint;
-    const small = !footprint || footprint.every(bounds => {
-      const a = map.project(bounds[0]);
-      const b = map.project(bounds[1]);
-      return Math.min(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) < 17;
-    });
-
-    if (!small || !view.contains(point)) {
-      dots.get(code)?.remove();
-      continue;
-    }
-    smallCountries.push({ country, point });
-    if (!dots.has(code)) {
-      const icon = L.divIcon({
-        className: "country-dot-hit",
-        html: '<span></span>',
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-      });
-      const marker = L.marker(point, { icon, alt: "Small country or territory", bubblingMouseEvents: false });
-      marker.on("click", event => selectDot(country, event));
-      dots.set(code, marker);
-    }
-    const marker = dots.get(code).setLatLng(point).addTo(map);
-    marker.getElement().setAttribute("aria-label", "Small country or territory");
-  }
-  updateStyles();
-}
-
-function selectDot(country, event) {
-  if (locked || !target) return;
-  if (event.originalEvent?.detail) {
-    const point = map.mouseEventToLayerPoint(event.originalEvent);
-    const nearby = smallCountries.map(dot => ({
-      ...dot, distance: map.latLngToLayerPoint(dot.point).distanceTo(point),
-    })).filter(dot => dot.distance <= 17).sort((a, b) => a.distance - b.distance);
-    if (nearby.length > 1 && nearby[1].distance - nearby[0].distance < 5 && map.getZoom() < map.getMaxZoom()) {
-      map.setView(event.latlng, map.getZoom() + 2);
-      mapElement("hotcold").textContent = "Several small places are close together. The map zoomed in so you can choose.";
-      return;
-    }
-    country = nearby[0]?.country || country;
-  }
-  selectCountry(country);
 }
 
 function updateHUD() {
@@ -142,15 +84,17 @@ function nextQuestion() {
   updateHUD();
   mapElement("map-instruction").hidden = false;
   mapElement("target-name").textContent = target.name;
-  mapElement("hotcold").textContent = "Select a country on the map. Dots mark small countries and territories.";
+  mapElement("hotcold").textContent = "Select a country on the map.";
   mapElement("see-btn").textContent = "Reveal answer";
   mapElement("see-btn").disabled = false;
   mapElement("next-btn").hidden = true;
 }
 
 function startRound(codes) {
-  const pool = [...countries.values()].filter(eligible);
-  const picked = codes?.map(code => countries.get(code)).filter(eligible);
+  // Only ask for places that have an outline to click.
+  const playable = country => eligible(country) && outlines.has(country.cca3);
+  const pool = [...countries.values()].filter(playable);
+  const picked = codes?.map(code => countries.get(code)).filter(playable);
   queue = picked?.length ? picked : shuffle(pool).slice(0, roundLength);
   if (!queue.length) throw new Error("No places available in this region");
   entries = [];
@@ -262,10 +206,8 @@ async function init() {
   }).setView([15, 10], 2);
   world = L.layerGroup().addTo(map);
   addWorld(geo);
-  map.on("moveend", refreshDots);
   new ResizeObserver(() => map.invalidateSize({ pan: false })).observe(map.getContainer());
   resetView();
-  refreshDots();
   mapElement("map-reset-view").disabled = false;
   mapElement("map-reset-view").onclick = () => {
     resetView();

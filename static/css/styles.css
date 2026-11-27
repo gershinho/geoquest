@@ -573,19 +573,6 @@ button:disabled{ cursor: default; }
 .map-reset-view{ position: absolute; z-index: 1000; top: 10px; right: 10px; }
 .map-footer{ display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--fern); }
 .map-footer a{ text-decoration: underline; text-underline-offset: 3px; }
-.map-legend-dot, .country-dot-hit span{
-  display: inline-block;
-  width: 11px;
-  height: 11px;
-  border: 1.5px solid white;
-  border-radius: 50%;
-  background: var(--map-land);
-}
-.map-legend-dot{ vertical-align: middle; }
-.country-dot-hit{ display: grid; place-items: center; }
-.country-dot-hit:hover span, .country-dot-hit:focus-visible span{ outline: 3px solid var(--focus); }
-.country-dot-hit[data-outcome="wrong"] span{ background: var(--red); }
-.country-dot-hit[data-outcome="correct"] span{ background: var(--green); }
 
 .language-header{
   display: flex;
